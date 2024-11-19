@@ -63,21 +63,19 @@ def app():
             if database_details:
                 elements_df=DataFrame_from_notionDatabase(database_details)
                 if not elements_df.empty:
-                    st.write("## Database Content:",selected_db)
+                    st.write("### Database Content:",selected_db)
                     st.dataframe(elements_df)
                     info_message.empty()
                     validate_schema(st.session_state["properties"],selected_db_id,NOTION_API_KEY)
                 else:
                     st.error('Database Failed')
             else:
-                st.error('Database Failed')
-                
+                st.error('Database Failed')     
         elif "Notion_data" in st.session_state:
             properties = st.session_state["properties"] 
             selected_db_id = st.session_state["selected_db_id"] 
             Notion_data = st.session_state["Notion_data"]
-            
-            st.write("**Previously Fetched Data**:",st.session_state["Notion DB Name"])
+            st.write("### Previously Fetched Data:",st.session_state["Notion DB Name"])
             st.dataframe(Notion_data)
             
 
