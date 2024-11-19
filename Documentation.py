@@ -58,7 +58,7 @@ def app():
         - **Date**: Date of creation/update.
         - **Last Edited Date on ADO**: Date when the work item was last updated in Azure DevOps.
         - **ADO ID**: A unique ID from Azure DevOps to link the Notion database entry with the corresponding work item in ADO.
-        - **Type**: Type of work item (e.g., Bug, Task, etc.).
+        - **Type**: Type of work item (e.g.,Feature, Epic, Story, Bug, Task, etc.).
         - **ADO Status**: The current status of the work item in Azure DevOps.
         - **Estimates**: The estimated effort or time for the work item.
         - **Last edited time**: The time when the last update was made (for validation purposes).
@@ -76,6 +76,9 @@ def app():
         st.subheader("Steps:")
         st.markdown("""
         1. Enter the **Project Name** and **Area Path** in the application.
+                ```
+                    Only Features and Epics are fetched as of now. 
+                ```
         2. Click the **Fetch ADO Work Items** button.
         3. The fetched work items will be displayed in the application for comparison and synchronization.
         """)
