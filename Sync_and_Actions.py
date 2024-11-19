@@ -13,14 +13,11 @@ from datetime import datetime  # Import datetime module
 import requests
 from requests.auth import HTTPBasicAuth
 from bs4 import BeautifulSoup
-import tkinter as tk
-from tkinter import ttk, messagebox
 import requests
 from requests.auth import HTTPBasicAuth
 import requests
 import ipywidgets as widgets
 from IPython.display import display, clear_output
-from tkinter import scrolledtext, messagebox, Toplevel, ttk
 from difflib import get_close_matches, SequenceMatcher
 import re
 import functools
