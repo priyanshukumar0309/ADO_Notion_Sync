@@ -51,7 +51,7 @@ def app():
         database_names = [f"{db['name']} ({db['id']})" for db in st.session_state.databases]
         selected_db = st.selectbox("**Select a Database**", options=[""] + database_names)
 
-        if selected_db and (not st.session_state.get('selected_db') or selected_db != st.session_state.selected_db):
+        if st.button('Load Database'):
             st.session_state.selected_db =selected_db
             selected_db_id = selected_db.split("(")[-1].strip(")")
             # Fetch data from Notion API using the selected database ID
@@ -76,9 +76,11 @@ def app():
             properties = st.session_state["properties"] 
             selected_db_id = st.session_state["selected_db_id"] 
             Notion_data = st.session_state["Notion_data"]
-            validate_schema(properties,selected_db_id,NOTION_API_KEY)
-            st.write("**Database Content**:",st.session_state["Notion DB Name"])
+            
+            st.write("**Previously Fetched Data**:",st.session_state["Notion DB Name"])
             st.dataframe(Notion_data)
+            
+
         else:
             st.write("Please select a database.")
     st.markdown("""
@@ -295,7 +297,7 @@ def validate_schema(properties,DATABASE_ID,NOTION_API_KEY):
     }
     # Identify missing properties
     missing_properties = [
-        prop for prop in REQUIRED_PROPERTIES if prop != "last_edited_time" and prop not in properties
+        prop for prop in REQUIRED_PROPERTIES if prop != "Last edited time" and prop not in properties
     ]
 
     # Display status of required properties
@@ -313,7 +315,7 @@ def validate_schema(properties,DATABASE_ID,NOTION_API_KEY):
                     success = False
 
             if success:
-                st.success("All missing properties have been added successfully!")
+                st.success("All missing properties have been added successfully, please Reload Database!")
             else:
                 st.error("Some properties could not be added. Please check the logs.")
     else:

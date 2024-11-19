@@ -36,11 +36,7 @@ def app():
         if 'projects' in st.session_state:
             
             # Initialize session state if it's not present
-            if "selected_project" not in st.session_state:
-                st.session_state.selected_project = None
-                
-            # Show dropdown only if a project hasn't been selected yet
-            if st.session_state.selected_project is None:
+            if "selected_project" not in st.session_state or "selected_project_index" not in st.session_state :
                 # Create a dropdown without any pre-selected value
                 selected_project = st.selectbox("Select a Project", options=[""] + st.session_state.projects)
                 
@@ -48,12 +44,13 @@ def app():
                 if selected_project:
                     st.session_state["selected_project"] = selected_project
             else:
-                selected_project = st.session_state.selected_project  # Use the selected project from session state
-                selected_project = st.selectbox("Select a Project", options=[""] + st.session_state.projects)
+                selected_project = st.selectbox("Select a Project", options=[""] + st.session_state.projects, index=st.session_state.selected_project_index+1)
+
 
             # Proceed with fetching area paths if a project is selected
-            if selected_project :
+            if selected_project  :
                 st.session_state.selected_project = selected_project
+                st.session_state.selected_project_index = st.session_state.projects.index(selected_project)
                 area_paths = fetch_area_paths(organization, selected_project, personal_access_token)
                 if area_paths:
                         st.session_state.area_paths = area_paths
@@ -85,7 +82,7 @@ def app():
         # Display data collected in session state (ADO_data)
         if "ADO_data" in st.session_state and not table_data:
             ADO_data = st.session_state["ADO_data"]
-            st.write("### ADO_data Collected Data:")
+            st.write("### Previously Collected Data:")
             st.write(f"Selected Project: {st.session_state.get('selected_project', 'Not selected')}")
             st.write(f"Selected Area Paths: {', '.join(st.session_state.get('selected_area_paths', []))}")
             st.dataframe(ADO_data)
@@ -172,9 +169,9 @@ def fetch_azure_projects(organization, personal_access_token):
             projects = response.json().get('value', [])
             return (1,[project['name'] for project in projects])
         else:
-            return (0,{"error": f"Failed to fetch projects. Status code: {response.status_code}", "details": response.text})
+            return (0,[{"error": f"Failed to fetch projects. Status code: {response.status_code}", "details": response.text}])
     except requests.exceptions.RequestException as e:
-        return (0,{"error": "Request failed", "details": str(e)})
+        return (0,[{"error": "Request failed", "details": str(e)}])
 
 def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=50):
     if not area_paths:
