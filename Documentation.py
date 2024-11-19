@@ -52,17 +52,19 @@ def app():
         
         st.subheader("4.1 Add Missing Columns")
         st.markdown("""
-        If the database does not have the required columns for proper synchronization with Azure DevOps, the application will guide you to:
-        **REQUIRED_PROPERTIES**:
-        These properties must be present in the Notion database for proper syncing:
-        - **Date**: Date of creation/update.
-        - **Last Edited Date on ADO**: Date when the work item was last updated in Azure DevOps.
-        - **ADO ID**: A unique ID from Azure DevOps to link the Notion database entry with the corresponding work item in ADO.
-        - **Type**: Type of work item (e.g.,Feature, Epic, Story, Bug, Task, etc.).
-        - **ADO Status**: The current status of the work item in Azure DevOps.
-        - **Estimates**: The estimated effort or time for the work item.
-        - **Last edited time**: The time when the last update was made (for validation purposes).
+        If the database does not have the required columns for proper synchronization with Azure DevOps, the application will guide you to.
         
+        **REQUIRED_PROPERTIES**: These properties must be present in the Notion database for proper syncing:
+
+        ```
+            - **Date**: Date of creation/update.
+            - **Last Edited Date on ADO**: Date when the work item was last updated in Azure DevOps.
+            - **ADO ID**: A unique ID from Azure DevOps to link the Notion database entry with the corresponding work item in ADO.
+            - **Type**: Type of work item (e.g.,Feature, Epic, Story, Bug, Task, etc.).
+            - **ADO Status**: The current status of the work item in Azure DevOps.
+            - **Estimates**: The estimated effort or time for the work item.
+            - **Last edited time**: The time when the last update was made (for validation purposes).
+        ```
         **Note**: If any of these properties are missing, you can easily add them directly from the application interface. However, the **Last Edited Date on ADO** column must be updated manually in the Notion database for proper tracking and syncing.
     
         """)
