@@ -21,9 +21,10 @@ def app():
         st.session_state["global_variable"]["default_organization"] = organization
         with open(st.session_state['file_path'], 'w') as file:
             json.dump(st.session_state["global_variable"], file)
-    table_data = []  # Initialize table_data
+    st.warning("Please provide both organization and personal access token.")
     st.markdown("<hr>", unsafe_allow_html=True)
-
+    
+    table_data = []  # Initialize table_data
     if organization and personal_access_token:
         if st.button("Fetch Azure Databases"):
             status, projects = fetch_azure_projects(organization, personal_access_token)
@@ -34,7 +35,7 @@ def app():
 
         # Check if projects are available in session state
         if 'projects' in st.session_state:
-            
+            st.info("Please select a project and then  Area Path(s) from below drop downs.")
             # Initialize session state if it's not present
             if "selected_project" not in st.session_state or "selected_project_index" not in st.session_state :
                 # Create a dropdown without any pre-selected value
@@ -71,13 +72,10 @@ def app():
                                     st.write("### Work Items Table:")
                                     for area_path in st.session_state["selected_area_paths"]:
                                         st.write(f"Area Path: {area_path}")
-                                    st.dataframe(table_data)
-                        else:
-                            st.warning("Please select at least one area path.")
+                                    st.dataframe(table_data)                   
                 else:
                     st.warning(f"Fetch Area Paths ")
-        else:
-            st.warning("Please provide both organization and personal access token.")
+        
 
         # Display data collected in session state (ADO_data)
         if "ADO_data" in st.session_state and not table_data:

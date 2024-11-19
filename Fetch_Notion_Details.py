@@ -50,7 +50,7 @@ def app():
     if 'databases' in st.session_state:
         database_names = [f"{db['name']} ({db['id']})" for db in st.session_state.databases]
         selected_db = st.selectbox("**Select a Database**", options=[""] + database_names)
-
+        st.write("Please select a database.")
         if st.button('Load Database'):
             st.session_state.selected_db =selected_db
             selected_db_id = selected_db.split("(")[-1].strip(")")
@@ -63,7 +63,7 @@ def app():
             if database_details:
                 elements_df=DataFrame_from_notionDatabase(database_details)
                 if not elements_df.empty:
-                    st.write("**Database Content**:",selected_db)
+                    st.write("## Database Content:",selected_db)
                     st.dataframe(elements_df)
                     info_message.empty()
                     validate_schema(st.session_state["properties"],selected_db_id,NOTION_API_KEY)
@@ -81,8 +81,7 @@ def app():
             st.dataframe(Notion_data)
             
 
-        else:
-            st.write("Please select a database.")
+        
     st.markdown("""
             <style>
                 .stButton > button {
