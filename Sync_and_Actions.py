@@ -841,8 +841,8 @@ def update_notion_page_ado_id(page_id, ado_id):
 def update_work_item_description(work_item_id):
     #first we update notion page from ADO content
     update=update_notion_description_from_ado(work_item_id)
-    if update:
-        eturn (0,'Notion Page Update Failed')
+    if not update:
+        return (0,'Notion Page Update Failed')
     #second we update ADO from Notion content
     page_id = fetch_page_id_by_ado_id(work_item_id)
     if not page_id:
@@ -912,7 +912,7 @@ def update_notion_description_from_ado(ado_id):
     # Fetch the Notion page details
     notion_page_url = f"https://api.notion.com/v1/pages/{notion_page_id}"
     notion_page_response = requests.get(notion_page_url, headers=headers)
-    if notion_page_response.raise_for_status():
+    if notion_page_response:
         notion_page = notion_page_response.json()
     else:
         return 0
