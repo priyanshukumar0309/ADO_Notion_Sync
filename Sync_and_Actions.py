@@ -821,7 +821,7 @@ def Create_ADO_items(notion_page,selected_area_path,organization,project,pat):
         if update_notion_page_ado_id(notion_page['id'],work_item_id):
             return (1, f"Work item created: {work_item_id}"))
         else:
-            (0,'Failed to update Notion ADO ID')
+            return (0,'Failed to update Notion ADO ID')
     else:
         return (0, "Failed at create ADO item")
     #==============================================================================================================================
