@@ -228,7 +228,7 @@ def app():
         st.markdown("<hr>", unsafe_allow_html=True)
 #=Notion Data===================================================================================================================================
 
-        st.write("### Notion Items --> ADO")
+        st.write("### Notion Items not in ADO")
         filtered_notion_data = Notion_data[
             (Notion_data['Sync'] == 'Missing') & 
             Notion_data['Name'].notnull() & 
