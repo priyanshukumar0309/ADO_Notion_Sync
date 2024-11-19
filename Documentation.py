@@ -111,8 +111,8 @@ def app():
         - If only descriptions are out of sync, choose this option to update descriptions in both systems.
         """)
 
-    with st.expander("Example on how to use"):
-        st.header("Connecting Notion with DBT Digital Payments")
+    st.title("Example on how to use"):
+        st.write("## Connecting Notion with DBT Digital Payments")
         st.markdown("""
             Follow these steps:
             
