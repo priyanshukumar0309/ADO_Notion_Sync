@@ -284,7 +284,9 @@ def app():
                                     else:
                                         st.write(message)
         else:
-            st.warning('Name and Type must be present to create ADO item. No more items to create ')
+            st.warning("""
+                - Name and Type must be present to create ADO item. 
+                - No more items to create """)
         st.markdown("<hr>", unsafe_allow_html=True)
 ## Just descriptions:        
         st.write("### Sync Descriptions")
