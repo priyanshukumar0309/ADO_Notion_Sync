@@ -17,6 +17,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 import re
 import functools
+from Fetch_ADO_Details import fetch_work_items_by_area_paths, DataFrame_from_workitems
+from Fetch_Notion_Details import  fetch_notion_database_details, DataFrame_from_notionDatabase
 
 
 
@@ -166,7 +168,7 @@ def app():
 
             if not ADO_data_filtered_df.empty:
                 st.dataframe(ADO_data_filtered_df)
-                if st.button("Create ADO Items"):
+                if st.button("Create Notion Pages"):
                     for _, row in ADO_data_filtered_df.iterrows():
                         # Fetch work item details from Azure DevOps
                         work_item_details = fetch_ado_work_item(
@@ -185,7 +187,11 @@ def app():
                             )
                             if status:
                                 st.write(message)
+                                database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
+                                if database_details:
+                                    elements_df=DataFrame_from_notionDatabase(database_details)
                                 st.info('Please reload Notion Details to see updates')
+                                st.rerun() 
                             else:
                                 st.write(message)
         else:
@@ -209,7 +215,11 @@ def app():
                         status, message = Sync_ADO_Notion(next(iter([row['ID']])))
                         if status:
                             st.write(message)
+                            database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
+                            if database_details:
+                                elements_df=DataFrame_from_notionDatabase(database_details)
                             st.info('Please reload Notion Details to see updates')
+                            st.rerun()
                         else:
                             st.write(message)
 
@@ -262,7 +272,15 @@ def app():
                                     )
                                     if status:
                                         st.write(message)
-                                        st.info('Please reload Notion Details to see updates')
+                                        work_items = fetch_work_items_by_area_paths(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],st.session_state["selected_area_paths"], st.session_state["global_variable"]["default_pat"])
+                                        if 'error' in work_items:
+                                            st.error(work_items['error'])
+                                        else:
+                                            # Prepare data for table
+                                            table_data = DataFrame_from_workitems(work_items)
+                                        st.info('Please reload Azure Devops to see updates')
+                                        st.rerun()
+                                        
                                     else:
                                         st.write(message)
         else:
@@ -487,7 +505,7 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
         print(f"Failed to update ADO work item: {response.status_code} - {response.text}")
     
     url = f"https://api.notion.com/v1/pages/{notion_page_id}"
-    headers = {
+    headers2 = {
         "Authorization": f"Bearer {st.session_state["global_variable"]["NOTION_API_KEY"]}",
         "Notion-Version": "2021-05-13",
         "Content-Type": "application/json"
@@ -510,11 +528,12 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
    
     
    
-    response = requests.patch(url, headers=headers, data=json.dumps(data))
+    response = requests.patch(url, headers=headers2, data=json.dumps(data))
     if response.status_code == 200:
         print(f"Updated Notion page {notion_page_id} successfully.")
     else:
         print(f"Failed to update Notion page: {response.status_code} - {response.text}")
+        st.write('didnt work')
 
 def update_notion_page(page_id, title, status, work_item_type, target_date, start_date,Estimate,ado_last_edited_date, NOTION_API_KEY):
     """

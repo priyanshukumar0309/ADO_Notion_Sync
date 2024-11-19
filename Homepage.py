@@ -27,7 +27,7 @@ def app():
 
     **Connect with me:**
     - [LinkedIn](https://www.linkedin.com/in/kpriyanshu)
-    - [MS Teams](https://teams.microsoft.com/l/chat/0/0?users=kumar.priyanshu@volvocars.com)
+    - [Teams](https://teams.microsoft.com/l/chat/0/0?users=kumar.priyanshu@volvocars.com)
     """)
     
    

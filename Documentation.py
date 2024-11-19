@@ -112,7 +112,7 @@ def app():
         """)
 
     st.title("Example on how to use")
-    st.write("## Connecting Notion with DBT Digital Payments")
+    st.header("Connecting Notion with DBT Digital Payments")
     st.markdown("""
             Follow these steps:
             

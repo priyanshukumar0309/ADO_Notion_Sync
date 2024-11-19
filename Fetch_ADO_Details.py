@@ -62,40 +62,15 @@ def app():
                     selected_area_paths = st.multiselect("Select Area Paths", area_paths)
                     if selected_area_paths:
                         st.session_state["selected_area_paths"] = selected_area_paths
-                        
+        
                         if st.button("Fetch work items"):
                             work_items = fetch_work_items_by_area_paths(organization, selected_project, selected_area_paths, personal_access_token)
-                            
                             if 'error' in work_items:
                                 st.error(work_items['error'])
                             else:
                                 # Prepare data for table
-                                table_data = []
-                                for work_item in work_items:
-                                    title = work_item['fields'].get('System.Title', 'No title')
-                                    state = work_item['fields'].get('System.State', 'No state')
-                                    assigned_to = work_item['fields'].get('System.AssignedTo', {}).get('displayName', 'Unassigned')
-                                    work_item_type = work_item['fields'].get('System.WorkItemType', 'No type')
-                                    created_date = work_item['fields'].get('System.CreatedDate', 'No date')
-                                    target_date = work_item['fields'].get('Microsoft.VSTS.Scheduling.TargetDate', None)
-                                    start_date =work_item['fields'].get('Microsoft.VSTS.Scheduling.StartDate', None)
-                                    Last_edit_date_on_Ado =work_item['fields'].get('System.ChangedDate', None)
-                                    table_data.append({
-                                        'ID': work_item['id'],
-                                        'Title': title,
-                                        'State': state,
-                                        'Assigned To': assigned_to,
-                                        'Work Item Type': work_item_type,
-                                        'Created Date': created_date,
-                                        'Change Date':Last_edit_date_on_Ado,
-                                        'Start Date':start_date,
-                                        'Target Date':target_date
-
-                                    })
-                                
-                                # Display the data in a table format
+                                table_data = DataFrame_from_workitems(work_items)
                                 if table_data:
-                                    st.session_state["ADO_data"] = table_data
                                     st.write("### Work Items Table:")
                                     for area_path in st.session_state["selected_area_paths"]:
                                         st.write(f"Area Path: {area_path}")
@@ -121,6 +96,38 @@ def app():
                 }
             </style>
         """, unsafe_allow_html=True)
+
+
+def DataFrame_from_workitems(work_items):
+    table_data = []
+    for work_item in work_items:
+        title = work_item['fields'].get('System.Title', 'No title')
+        state = work_item['fields'].get('System.State', 'No state')
+        assigned_to = work_item['fields'].get('System.AssignedTo', {}).get('displayName', 'Unassigned')
+        work_item_type = work_item['fields'].get('System.WorkItemType', 'No type')
+        created_date = work_item['fields'].get('System.CreatedDate', 'No date')
+        target_date = work_item['fields'].get('Microsoft.VSTS.Scheduling.TargetDate', None)
+        start_date =work_item['fields'].get('Microsoft.VSTS.Scheduling.StartDate', None)
+        Last_edit_date_on_Ado =work_item['fields'].get('System.ChangedDate', None)
+        table_data.append({
+            'ID': work_item['id'],
+            'Title': title,
+            'State': state,
+            'Assigned To': assigned_to,
+            'Work Item Type': work_item_type,
+            'Created Date': created_date,
+            'Change Date':Last_edit_date_on_Ado,
+            'Start Date':start_date,
+            'Target Date':target_date
+
+        })
+    
+    # Display the data in a table format
+    if table_data:
+        st.session_state["ADO_data"] = table_data
+        return table_data
+    else:
+        return table_data
 
 
 def fetch_area_paths(organization, project_name, personal_access_token):

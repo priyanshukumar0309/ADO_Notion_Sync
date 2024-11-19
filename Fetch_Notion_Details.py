@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import json
-
+from Fetch_ADO_Details import fetch_work_items_by_area_paths, DataFrame_from_workitems
 
 
 # Notion API URL
@@ -56,23 +56,22 @@ def app():
             selected_db_id = selected_db.split("(")[-1].strip(")")
             # Fetch data from Notion API using the selected database ID
             info_message=st.info("Fetching data from Notion...")
+            st.session_state["selected_db_id"]=selected_db_id
+            st.session_state["Notion DB Name"] = selected_db
+            
             database_details = fetch_notion_database_details(notion_api_key, selected_db_id)
             if database_details:
-                elements, properties = store_data(database_details)
-                if elements and properties:
-                    st.session_state["properties"]=properties
-                    st.session_state["selected_db_id"]=selected_db_id 
-                    headers = extract_headers_from_properties(properties)
-                    elements_df=convert_elements_to_dataframe(elements, headers) 
-                    info_message.empty()
-                    st.success('Databases Fetched')
-                if elements:
-                    # Convert elements to a DataFrame and display
-                    st.session_state["Notion_data"]=elements_df 
-                    st.session_state["Notion DB Name"] = selected_db
+                elements_df=DataFrame_from_notionDatabase(database_details)
+                if not elements_df.empty:
                     st.write("**Database Content**:",selected_db)
-                    st.dataframe(elements_df)  # Display the content as a table in Streamlit
-                validate_schema(properties,selected_db_id,NOTION_API_KEY)
+                    st.dataframe(elements_df)
+                    info_message.empty()
+                    validate_schema(st.session_state["properties"],selected_db_id,NOTION_API_KEY)
+                else:
+                    st.error('Database Failed')
+            else:
+                st.error('Database Failed')
+                
         elif "Notion_data" in st.session_state:
             properties = st.session_state["properties"] 
             selected_db_id = st.session_state["selected_db_id"] 
@@ -91,6 +90,20 @@ def app():
         """, unsafe_allow_html=True)
 
 
+def DataFrame_from_notionDatabase(database_details):
+    elements, properties = store_data(database_details)
+    elements_df = pd.DataFrame()
+    if elements and properties:
+        st.session_state["properties"]=properties
+        headers = extract_headers_from_properties(properties)
+        elements_df=convert_elements_to_dataframe(elements, headers) 
+        st.success('Databases Fetched')
+    if not elements_df.empty:
+        # Convert elements to a DataFrame and display
+        st.session_state["Notion_data"]=elements_df 
+        return elements_df
+    else:
+        return elements_df
 
 
 
