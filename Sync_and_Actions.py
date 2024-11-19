@@ -512,7 +512,7 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
    
     response = requests.patch(url, headers=headers, data=json.dumps(data))
     if response.status_code == 200:
-        print(f"Updated Notion page {page_id} successfully.")
+        print(f"Updated Notion page {notion_page_id} successfully.")
     else:
         print(f"Failed to update Notion page: {response.status_code} - {response.text}")
 
