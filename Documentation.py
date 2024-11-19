@@ -76,9 +76,9 @@ def app():
         st.subheader("Steps:")
         st.markdown("""
         1. Enter the **Project Name** and **Area Path** in the application.
-                ```
-                    Only Features and Epics are fetched as of now. 
-                ```
+        ```
+            Only Features and Epics are fetched as of now. 
+        ```
         2. Click the **Fetch ADO Work Items** button.
         3. The fetched work items will be displayed in the application for comparison and synchronization.
         """)
