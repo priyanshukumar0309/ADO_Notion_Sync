@@ -4,7 +4,6 @@ from requests.auth import HTTPBasicAuth
 import streamlit as st
 import pandas as pd
 import json
-from notion_client import Client
 import pandas as pd
 import logging
 from azure.devops.connection import Connection
@@ -908,9 +907,24 @@ def update_work_item_description(work_item_id):
 
 def update_notion_description_from_ado(ado_id):
     # Fetch the Notion page details
-    notion = Client(auth=st.session_state["global_variable"]["NOTION_API_KEY"])
+    # Set API Key and Notion API base URL
     notion_page_id=fetch_page_id_by_ado_id(ado_id)
-    notion_page = notion.pages.retrieve(page_id=notion_page_id)
+    notion_api_key = st.session_state["global_variable"]["NOTION_API_KEY"]
+    headers = {
+        "Authorization": f"Bearer {notion_api_key}",
+        "Notion-Version": "2022-06-28",  # Use the correct version of the Notion API
+        "Content-Type": "application/json"
+    }
+
+    # Fetch the Notion page details
+    notion_page_url = f"https://api.notion.com/v1/pages/{notion_page_id}"
+    notion_page_response = requests.get(notion_page_url, headers=headers)
+    if notion_page_response.raise_for_status():
+        notion_page = notion_page_response.json()
+    else:
+        return 0
+
+    
     
     # Extract ADO ID from the Notion page
     #ado_id = extract_ado_id_from_notion(notion_page)

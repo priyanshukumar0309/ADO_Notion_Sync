@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import pandas as pd
-from notion_client import Client
 import json
 
 
@@ -99,25 +98,37 @@ def app():
 
 def fetch_notion_database_details(apikey,database_id):
     try:
-        # Fetch database info
-        notion = Client(auth=apikey)
-        database_info = notion.databases.retrieve(database_id=database_id)
+        headers = {
+            "Authorization": f"Bearer {apikey}",
+            "Notion-Version": "2022-06-28"  # Use the correct version of the Notion API
+        }
 
-        # Fetch all elements (rows) of the database
+        # Retrieve database info
+        database_url = f"https://api.notion.com/v1/databases/{database_id}"
+        database_response = requests.get(database_url, headers=headers)
+        database_response.raise_for_status()  # Raise an exception for HTTP errors
+        database_info = database_response.json()
+
+        # Query database for elements
+        query_url = f"https://api.notion.com/v1/databases/{database_id}/query"
         results = []
         has_more = True
         next_cursor = None
 
         while has_more:
-            query_result = notion.databases.query(database_id=database_id, start_cursor=next_cursor)
-            results.extend(query_result.get("results", []))
-            has_more = query_result.get("has_more", False)
-            next_cursor = query_result.get("next_cursor", None)
+            payload = {"start_cursor": next_cursor} if next_cursor else {}
+            query_response = requests.post(query_url, headers=headers, json=payload)
+            query_response.raise_for_status()
+            query_data = query_response.json()
+
+            results.extend(query_data.get("results", []))
+            has_more = query_data.get("has_more", False)
+            next_cursor = query_data.get("next_cursor", None)
 
         return {"database_info": database_info, "elements": results}
 
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+    except requests.exceptions.RequestException as e:
+        st.error(f"An API error occurred: {e}")
         return None
 
 # Function to extract headers from properties
