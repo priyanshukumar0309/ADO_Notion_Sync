@@ -819,7 +819,7 @@ def Create_ADO_items(notion_page,selected_area_path,organization,project,pat):
     if response.status_code in (200, 201):
         work_item_id = response.json().get('id')
         if update_notion_page_ado_id(notion_page['id'],work_item_id):
-            return (1, f"Work item created: {work_item_id}"))
+            return (1, f"Work item created: {work_item_id}")
         else:
             return (0,'Failed to update Notion ADO ID')
     else:
