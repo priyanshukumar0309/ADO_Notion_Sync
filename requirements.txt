@@ -4,6 +4,3 @@ pandas
 azure-devops
 msrest
 beautifulsoup4
-ipywidgets
-IPython
-difflib

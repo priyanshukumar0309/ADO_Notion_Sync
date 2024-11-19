@@ -15,10 +15,6 @@ from requests.auth import HTTPBasicAuth
 from bs4 import BeautifulSoup
 import requests
 from requests.auth import HTTPBasicAuth
-import requests
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-from difflib import get_close_matches, SequenceMatcher
 import re
 import functools
 
