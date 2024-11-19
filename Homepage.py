@@ -18,7 +18,7 @@ def app():
         errors, and ensures real-time consistency between the two systems.
     """)
 
-    st.header("## Created by")
+    st.header("Created by")
     st.markdown("""
         **Kumar Priyanshu**, Digital Payments Product Manager at Volvo Cars, created this app as a side project to streamline workflows 
         and improve data consistency between ADO and Notion. 
