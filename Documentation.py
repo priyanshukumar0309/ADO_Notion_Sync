@@ -112,8 +112,8 @@ def app():
         """)
 
     st.title("Example on how to use"):
-        st.write("## Connecting Notion with DBT Digital Payments")
-        st.markdown("""
+    st.write("## Connecting Notion with DBT Digital Payments")
+    st.markdown("""
             Follow these steps:
             
             1. **Notion Database Setup**: 
