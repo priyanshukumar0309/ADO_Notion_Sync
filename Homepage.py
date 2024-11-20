@@ -26,7 +26,6 @@ def app():
             Reach out if you find any bugs or have suggestions for improvements!
 
     **Connect with me:**
-    - [LinkedIn](https://www.linkedin.com/in/kpriyanshu)
     - [Teams](https://teams.microsoft.com/l/chat/0/0?users=kumar.priyanshu@volvocars.com)
     """)
     
