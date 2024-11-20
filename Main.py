@@ -8,7 +8,12 @@ from Sync_and_Actions import app as sync_app
 from Homepage import app as home_app
 from Documentation import app as documentation_app
 # Sidebar navigation
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_title="Notion ADO Sync",  # Tab name
+    page_icon="🌟"             # Emoji as an icon or use a file path for a custom image
+                  
+)
 
 file_path = 'variable.json'
 st.session_state['file_path'] = file_path
