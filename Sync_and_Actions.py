@@ -224,7 +224,7 @@ def app():
                             st.write(message)
 
         else:
-            st.success('All items of ADO are present and synced in Notion')
+            st.warning('No more items to Sync in ADO or Notion')
         st.markdown("<hr>", unsafe_allow_html=True)
 #=Notion Data===================================================================================================================================
 
@@ -284,9 +284,7 @@ def app():
                                     else:
                                         st.write(message)
         else:
-            st.warning("""
-                - Name and Type must be present to create ADO item. 
-                - No more items to create """)
+            st.warning('Name and Type must be present to create ADO item. No more items to create ')
         st.markdown("<hr>", unsafe_allow_html=True)
 ## Just descriptions:        
         st.write("### Sync Descriptions")
@@ -404,7 +402,7 @@ def create_notion_page(database_id, work_item_details, notion_api_key):
     ado_id = str(work_item_details['id'])
     state = work_item_details['fields'].get('System.State', 'Unknown State')
     work_item_type = work_item_details['fields'].get('System.WorkItemType', 'Unknown Type')
-    target_date = work_item_details['fields'].get('Microsoft.VSTS.Scheduling.TargetDate', None)
+    target_date = work_item_details['fields'].ƒ
     start_date =work_item_details['fields'].get('Microsoft.VSTS.Scheduling.StartDate', None)
     Last_edit_date_on_Ado =work_item_details['fields'].get('System.ChangedDate', None)
     
@@ -819,9 +817,9 @@ def Create_ADO_items(notion_page,selected_area_path,organization,project,pat):
     if response.status_code in (200, 201):
         work_item_id = response.json().get('id')
         if update_notion_page_ado_id(notion_page['id'],work_item_id):
-            return (1, f"Work item created: {work_item_id}")
+            return (1, "Work item created :{work_item_id}")
         else:
-            return (0,'Failed to update Notion ADO ID')
+            (0,'Failed to update Notion ADO ID')
     else:
         return (0, "Failed at create ADO item")
     #==============================================================================================================================
@@ -1173,7 +1171,26 @@ def html_to_notion_blocks(html):
                 "content": cleaned_content
             }
         } if cleaned_content else None
-    
+
+    # Function to process a table and convert it to Notion blocks
+    def process_table(table):
+        table_blocks = []
+        for row in table.find_all('tr'):
+            row_cells = []
+            for cell in row.find_all(['td', 'th']):  # Handle both <td> and <th>
+                cell_content = text_to_rich_text(cell)
+                if cell_content:
+                    row_cells.append(cell_content)
+            if row_cells:
+                table_blocks.append({
+                    "object": "block",
+                    "type": "table_row",
+                    "table_row": {
+                        "cells": [[cell] for cell in row_cells]  # Notion table cells are lists of rich text
+                    }
+                })
+        return table_blocks if table_blocks else None
+
     def is_valid_url(url):
         regex = re.compile(
             r'^(https?|ftp)://'  # Protocol
@@ -1227,54 +1244,14 @@ def html_to_notion_blocks(html):
                 }
 
         elif element.name in ['p', 'div']:
-            # Check if paragraph/div contains strong or bold text and adjust accordingly
-            rich_texts = []
-            for child in element.contents:
-                content = clean_text(child.get_text(strip=True))
-                if content:  # Only add if content is non-empty
-                    if child.name in ['strong', 'b']:
-                        rich_texts.append({
-                            "type": "text",
-                            "text": {
-                                "content": content
-                            },
-                            "annotations": {
-                                "bold": True
-                            }
-                        })
-                    elif child.name == 'a':
-                        url = child.get('href', '')
-                        if is_valid_url(url):  # Check if the URL is valid
-                            rich_texts.append({
-                                "type": "text",
-                                "text": {
-                                    "content": content,
-                                    "link": {"url": url}
-                                }
-                            })
-                        else:
-                            print(f"Invalid URL skipped: {url}")
-                            # Optionally, you can add a placeholder or leave it out
-                            rich_texts.append({
-                                "type": "text",
-                                "text": {
-                                    "content": f"{content} (Invalid URL)"
-                                }
-                            })
-                    else:
-                        rich_texts.append({
-                            "type": "text",
-                            "text": {
-                                "content": content
-                            }
-                        })
-            
-            if rich_texts:  # Only create block if there's content
+            # Handle paragraph or div
+            rich_text = text_to_rich_text(element)
+            if rich_text:
                 block = {
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": rich_texts
+                        "rich_text": [rich_text]
                     }
                 }
 
@@ -1292,20 +1269,22 @@ def html_to_notion_blocks(html):
                     })
             return list_blocks if list_blocks else None
 
+        elif element.name == 'table':
+            return process_table(element)
+
         return block
 
     # Iterate over all elements and keep the order intact
     for element in soup.find_all(recursive=False):
         processed_block = process_element(element)
         if processed_block:
-            if isinstance(processed_block, list):  # Handle list blocks
+            if isinstance(processed_block, list):  # Handle list or table blocks
                 blocks.extend(processed_block)
             else:
                 blocks.append(processed_block)
 
     print("html_to_notion_blocks function Done")
     return blocks
-
     #=============================================================================================================================================
 #Update ADO Page with Notion Content
 
