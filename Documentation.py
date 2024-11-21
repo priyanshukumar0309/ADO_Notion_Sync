@@ -18,8 +18,8 @@ def app():
             2. Visit the [Notion API Integration Page](https://www.notion.so/my-integrations).
             3. Create a new integration and copy the generated API key.
         st.write("""
-        If you don't have the required permissions to create these keys, please ask your administrator to generate them for you.
-        """)
+            If you don't have the required permissions to create these keys, please ask your administrator to generate them for you.
+            """)
         - **Azure DevOps Personal Access Token (PAT)**:
              1. Navigate to your Azure DevOps organization.
             2. Go to your **Profile Settings** by clicking on your profile picture.
