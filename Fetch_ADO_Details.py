@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
 import json
-
+import time
 
 def app():
     st.title("Azure DevOps Databases")
@@ -134,7 +134,7 @@ def fetch_area_paths(organization, project_name, personal_access_token):
         url = base_url
         if continuation_token:
             url += f"&continuationToken={continuation_token}"
-
+        
         response = requests.get(url, auth=HTTPBasicAuth('', personal_access_token))
 
         if response.status_code == 200:
@@ -171,9 +171,12 @@ def fetch_azure_projects(organization, personal_access_token):
     except requests.exceptions.RequestException as e:
         return (0,[{"error": "Request failed", "details": str(e)}])
 
-def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=50):
+
+
+def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=75):
     if not area_paths:
         return {"error": "No area paths found."}
+    start_time = time.time()
 
     area_paths_conditions = [f"[System.AreaPath] = '{path.replace("'", "''")}'" for path in area_paths]
     area_paths_conditions_str = " OR ".join(area_paths_conditions)
@@ -199,27 +202,66 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
     if response.status_code == 200:
         work_items_data = response.json()
         work_item_ids = [item["id"] for item in work_items_data.get("workItems", [])]
-
+        print(work_item_ids)
         if work_item_ids:
-            detailed_work_items = []
-            total_items = len(work_item_ids)
-            for i in range(0, total_items, batch_size):
-                batch_ids = work_item_ids[i:i + batch_size]
-                info_message=st.info(f"Fetching batch {i // batch_size + 1} of {len(work_item_ids) // batch_size + 1}...")
+            
+            # Fields to fetch
+            fields = [
+                "System.Id",
+                "System.Title",
+                "System.State",
+                "System.AssignedTo",
+                "System.WorkItemType",
+                "Microsoft.VSTS.Scheduling.TargetDate",
+                "Microsoft.VSTS.Scheduling.StartDate",
+                "System.CreatedDate",
+                "System.ChangedDate"
+            ]
+
+            # API payload
+            payload = {
+                "ids": work_item_ids,
+                "fields": fields
+            }
+            url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitemsbatch?api-version=7.1"
+           
+    
+            batch_detailed_work_items = []
+            max_batch_size = 199  # Maximum batch size
+            batches = [work_item_ids[i:i + max_batch_size] for i in range(0, len(work_item_ids), max_batch_size)]
+    
+            start_time = time.time()
+            for idx, batch in enumerate(batches, start=1):
+                payload = {
+                    "ids": batch,
+                    "fields": fields
+                }
                 
-                batch_detailed_work_items = []
-                for work_item_id in batch_ids:
-                    detail_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{work_item_id}?api-version=7.1"
-                    detail_response = requests.get(detail_url, auth=HTTPBasicAuth('', personal_access_token))
-                    if detail_response.status_code == 200:
-                        batch_detailed_work_items.append(detail_response.json())
-                    else:
-                        batch_detailed_work_items.append({"error": f"Failed to fetch details for work item ID: {work_item_id}"})
+                info_message = st.info(f"Fetching batch {idx}/{len(batches)}...")
+                response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
                 
-                detailed_work_items.extend(batch_detailed_work_items)
+                if response.status_code == 200:
+                    batch_items = response.json().get('value', [])
+                    batch_detailed_work_items.extend(batch_items)
+                else:
+                    st.error(f"Error fetching batch {idx}: {response.status_code} - {response.text}")
+                
                 info_message.empty()
-                st.success("Fetching Complete")
-            return detailed_work_items
+    
+            elapsed_time = time.time() - start_time
+            st.success(f"Fetching Completed in {elapsed_time:.2f} seconds!")
+            return batch_detailed_work_items
+            info_message=st.info(f"Fetching batch ...")
+            # Headers
+           
+            response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
+            
+            if response:
+        
+                info_message.empty()
+                elapsed_time = time.time() - start_time
+                st.success(f"Fetching Completed in {elapsed_time:.2f} seconds!" )
+                return response.json().get('value')
         else:
             return {"error": "No work items found for the selected area paths."}
     else:
