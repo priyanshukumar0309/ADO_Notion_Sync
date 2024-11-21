@@ -196,7 +196,8 @@ def app():
                             else:
                                 st.write(message)
         else:
-            st.warning('''No more items available to sync.
+            st.warning('''
+            - No more items available to sync.
             - Please check if items are present in both Notion and ADO 
             - If not please use above options to push it to respective systems''')
 
