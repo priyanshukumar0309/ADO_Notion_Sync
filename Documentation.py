@@ -27,6 +27,15 @@ def app():
                 - Choose the required scopes such as **Work Items (Read/Write)** or **Project/Area Path Access**.
             5. Generate and copy the PAT securely.
         """)
+        st.write('### How to Access?')
+        st.write('1. Go to Azure Devops, click on profile and click  on Personal access tokens')
+        st.image('images/ADOProfile.png', width=400)
+        st.write('2. Provide Full Access to Read and Write, Set a expiry date (preferally a year) and Create')
+        st.image('images/CreatePATToken.png',width=500)
+        st.write('3. Make sure to copy and save it at a safe place')
+        st.image('images/savePATToken.png',width=500)
+        st.info('if you want to remove access, you can go to same location and revoke')
+        st.image('images/RevokePATToken.png',width=1200)
         st.write("""
         If you don't have the required permissions to create these keys, please ask your administrator to generate them for you.
         """)
@@ -41,7 +50,7 @@ def app():
             - Click **Share** at the top right of the database.
             - Enter the name of your integration and click **Invite**.
         """)
-       # st.image("", caption="Database Sharing Screenshot")
+        st.image("images/connectWithNotion.png", caption="Database Sharing Screenshot", width=700)
 
     # Section 4: Fetch Notion Database
     with st.expander("Notion"):
@@ -66,6 +75,7 @@ def app():
         **Note**: If any of these properties are missing, you can easily add them directly from the application interface. However, the **Last Edited Date on ADO** column must be updated manually in the Notion database for proper tracking and syncing.
     
         """)
+        st.image('images/NotionPageUpdate.png', width=600)
 
     # Section 5: Fetch Azure DevOps Work Items
     with st.expander("Azure DevOps"):
@@ -82,6 +92,7 @@ def app():
         2. Click the **Fetch ADO Work Items** button.
         3. The fetched work items will be displayed in the application for comparison and synchronization.
         """)
+        st.image('images/ADOPageUpdated.png', width =1200)
 
     # Section 6: Synchronize Notion and Azure DevOps
     with st.expander("Notion and ADO"):
@@ -119,7 +130,7 @@ def app():
             1. **Notion Database Setup**: 
                 - Ensure that the Notion database you want to sync with ADO is connected to the app. 
                     - For this example, **Test Page Database** is already connect to dbtDigitalPayments
-                    - You can then all pages from the selected Databases 
+                    - Then you can fetch all pages from the selected Databases 
                 - Connect **Notion** with the database
                 ```
                     dbtDigitalPayments 

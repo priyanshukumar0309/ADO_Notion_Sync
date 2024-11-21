@@ -2,18 +2,31 @@ import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
 import json
-import time
+
 
 def app():
+    st.markdown("""
+            <style>
+                .stButton > button {
+                    float: right;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
     st.title("Azure DevOps Databases")
     st.write("Display details about your Azure DevOps databases here.")
     st.info("Connect your Azure DevOps database API and display details.", icon="ℹ️")
-    
+    st.warning('Please provide both organization and personal access token.')
     # Default values for Organization and Personal Access Token
     default_organization =  st.session_state["global_variable"]["default_organization"] 
     default_pat = st.session_state["global_variable"]["default_pat"]  # Replace with your PAT or make it dynamic
     
     # Input fields for Organization and Personal Access Token
+   
+
+
+
+
     organization = st.text_input("Enter your Azure DevOps Organization", value=default_organization)
     personal_access_token = st.text_input("Enter your Personal Access Token", value=default_pat, type="password")
     if st.button("Save Variable"):
@@ -21,7 +34,6 @@ def app():
         st.session_state["global_variable"]["default_organization"] = organization
         with open(st.session_state['file_path'], 'w') as file:
             json.dump(st.session_state["global_variable"], file)
-    st.warning("Please provide both organization and personal access token.")
     st.markdown("<hr>", unsafe_allow_html=True)
     
     table_data = []  # Initialize table_data
@@ -84,14 +96,7 @@ def app():
             st.write(f"Selected Project: {st.session_state.get('selected_project', 'Not selected')}")
             st.write(f"Selected Area Paths: {', '.join(st.session_state.get('selected_area_paths', []))}")
             st.dataframe(ADO_data)
-        st.markdown("""
-            <style>
-                .stButton > button {
-                    float: right;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-
+       
 
 def DataFrame_from_workitems(work_items):
     table_data = []
@@ -134,7 +139,7 @@ def fetch_area_paths(organization, project_name, personal_access_token):
         url = base_url
         if continuation_token:
             url += f"&continuationToken={continuation_token}"
-        
+
         response = requests.get(url, auth=HTTPBasicAuth('', personal_access_token))
 
         if response.status_code == 200:
@@ -171,19 +176,16 @@ def fetch_azure_projects(organization, personal_access_token):
     except requests.exceptions.RequestException as e:
         return (0,[{"error": "Request failed", "details": str(e)}])
 
-
-
-def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=75):
+def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=50):
     if not area_paths:
         return {"error": "No area paths found."}
-    start_time = time.time()
 
     area_paths_conditions = [f"[System.AreaPath] = '{path.replace("'", "''")}'" for path in area_paths]
     area_paths_conditions_str = " OR ".join(area_paths_conditions)
     
     wiql_query = {
         "query": f"""
-        SELECT [System.Id]
+        SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.WorkItemType], [System.CreatedDate], [System.ChangedDate]
         FROM WorkItems
         WHERE ({' OR '.join(area_paths_conditions)})
         AND [System.WorkItemType] IN ('Epic', 'Feature')
@@ -202,67 +204,27 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
     if response.status_code == 200:
         work_items_data = response.json()
         work_item_ids = [item["id"] for item in work_items_data.get("workItems", [])]
-        
-        if work_item_ids:
-            
-            # Fields to fetch
-            fields = [
-                "System.Id",
-                "System.Title",
-                "System.State",
-                "System.AssignedTo",
-                "System.WorkItemType",
-                "Microsoft.VSTS.Scheduling.TargetDate",
-                "Microsoft.VSTS.Scheduling.StartDate",
-                "System.CreatedDate",
-                "System.ChangedDate"
-            ]
 
-            # API payload
-            payload = {
-                "ids": work_item_ids,
-                "fields": fields
-            }
-            url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitemsbatch?api-version=7.1"
-           
-    
-            batch_detailed_work_items = []
-            max_batch_size = 199  # Maximum batch size
-            batches = [work_item_ids[i:i + max_batch_size] for i in range(0, len(work_item_ids), max_batch_size)]
-    
-            start_time = time.time()
-            for idx, batch in enumerate(batches, start=1):
-                payload = {
-                    "ids": batch,
-                    "fields": fields
-                }
+        if work_item_ids:
+            detailed_work_items = []
+            total_items = len(work_item_ids)
+            for i in range(0, total_items, batch_size):
+                batch_ids = work_item_ids[i:i + batch_size]
+                info_message=st.info(f"Fetching batch {i // batch_size + 1} of {len(work_item_ids) // batch_size + 1}...")
                 
-                info_message = st.info(f"Fetching batch {idx}/{len(batches)}...")
-                response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
+                batch_detailed_work_items = []
+                for work_item_id in batch_ids:
+                    detail_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{work_item_id}?api-version=7.1"
+                    detail_response = requests.get(detail_url, auth=HTTPBasicAuth('', personal_access_token))
+                    if detail_response.status_code == 200:
+                        batch_detailed_work_items.append(detail_response.json())
+                    else:
+                        batch_detailed_work_items.append({"error": f"Failed to fetch details for work item ID: {work_item_id}"})
                 
-                if response.status_code == 200:
-                    batch_items = response.json().get('value', [])
-                    batch_detailed_work_items.extend(batch_items)
-                else:
-                    st.error(f"Error fetching batch {idx}: {response.status_code} - {response.text}")
-                
+                detailed_work_items.extend(batch_detailed_work_items)
                 info_message.empty()
-    
-            elapsed_time = time.time() - start_time
-            st.success(f"Fetching Completed for {len(work_item_ids)} items in {elapsed_time:.2f} seconds!")
-            st
-            return batch_detailed_work_items
-            info_message=st.info(f"Fetching batch ...")
-            # Headers
-           
-            response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
-            
-            if response:
-        
-                info_message.empty()
-                elapsed_time = time.time() - start_time
-                st.success(f"Fetching Completed in {elapsed_time:.2f} seconds!" )
-                return response.json().get('value')
+                st.success("Fetching Complete")
+            return detailed_work_items
         else:
             return {"error": "No work items found for the selected area paths."}
     else:
