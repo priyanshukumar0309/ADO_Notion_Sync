@@ -402,7 +402,7 @@ def create_notion_page(database_id, work_item_details, notion_api_key):
     ado_id = str(work_item_details['id'])
     state = work_item_details['fields'].get('System.State', 'Unknown State')
     work_item_type = work_item_details['fields'].get('System.WorkItemType', 'Unknown Type')
-    target_date = work_item_details['fields'].ƒ
+    target_date = work_item_details['fields'].get('Microsoft.VSTS.Scheduling.TargetDate', None)
     start_date =work_item_details['fields'].get('Microsoft.VSTS.Scheduling.StartDate', None)
     Last_edit_date_on_Ado =work_item_details['fields'].get('System.ChangedDate', None)
     
@@ -934,6 +934,7 @@ def update_notion_description_from_ado(ado_id):
     if notion_page_response:
         notion_page = notion_page_response.json()
     else:
+        print ('notion_page_response failed')
         return 0
 
     
@@ -956,11 +957,23 @@ def update_notion_description_from_ado(ado_id):
         # Remove the old Notion Description section if it exists
         updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
         if update_notion_page_description(notion_page_id, updated_description):
-            return 1
+            child_items = fetch_child_items(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],ado_id, st.session_state["global_variable"]["default_pat"])
+            if child_items :
+                if push_dataframe_to_notion(notion_page_id,pd.DataFrame(child_items)):
+                    print ('All Pushed')
+                    return 1
+                else: 
+                    print ('Child Items table push failed')
+                    return 0
+            else:
+                print ('Child Items fetch failed')
+                return 0
         else:
+            print ('update_notion_page_description failed')
             return 0
 
     else:
+        print ('work_item_details failed')
         return 0
 
 def fetch_page_id_by_ado_id( ado_id):
@@ -1034,43 +1047,47 @@ def update_notion_page_description(page_id, ado_description):
     header_exists = False
     updated_blocks = []
     content_block= html_to_notion_blocks(ado_description)
-    print(ado_description)
-    for block in blocks['results']:
-        block_type = block['type']
-        block_content = ""
-        # Extract text from the block
-        if block_type == 'heading_2' and block['heading_2']['rich_text']:
-            block_content = block['heading_2']['rich_text'][0]['text']['content']
-            if block_content == "ADO Description":
-                header_exists = True
-                if update_block_childern(block['id'],content_block):
-                #delete_block(block['id'])
-                    return 1  # Skip appending the original block
-                else :
-                    return 0
+    if content_block:
+        for block in blocks['results']:
+            block_type = block['type']
+            block_content = ""
+            # Extract text from the block
+            if block_type == 'heading_2' and block['heading_2']['rich_text']:
+                block_content = block['heading_2']['rich_text'][0]['text']['content']
+                if block_content == "ADO Description":
+                    header_exists = True
+                    if update_block_childern(block['id'],content_block):
+                    #delete_block(block['id'])
+                        return 1  # Skip appending the original block
+                    else :
+                        print ('update_block_childern failed')
+                        return 0
 
-        # Keep other existing blocks as they are
-        #updated_blocks.append(block)
-    if header_exists == False:
-        header_block =[{
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {
-                "rich_text": [
-                    {
-                        "type": "text",
-                        "text": {
-                            "content": "ADO Description",
+            # Keep other existing blocks as they are
+            #updated_blocks.append(block)
+        if header_exists == False:
+            header_block =[{
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": "ADO Description",
+                            },
                         },
-                    },
-                ],'is_toggleable': True,
-            },
-        }]
-        if append_blocks(page_id, header_block, content_block):
-            return 1
-        else:
-            return 0  
-        
+                    ],'is_toggleable': True,
+                },
+            }]
+            if append_blocks(page_id, header_block, content_block):
+                return 1
+            else:
+                print ('append_blocks failed')
+                return 0  
+    else:
+        print ('html_to_notion_blocks failed')
+        return 0
    
    
 
@@ -1109,12 +1126,14 @@ def update_block_childern(block_id,content_block):
         for block in res['results']:
             delete_block(block['id'])
     else:
+        print ('update_block_childern get call failed')
         return o
     payload = {"children": content_block}
     response = requests.patch(url, headers=headers, json=payload)
     if response:
         return 1
     else:
+        print (f'update_block_childern post call failed{payload}')
         return 0
 
 def get_page_blocks(page_id):
@@ -1151,10 +1170,13 @@ def append_blocks(page_id, header_block, content_block):
         return 0    
             
 
+from bs4 import BeautifulSoup
+
+from bs4 import BeautifulSoup
+
 def html_to_notion_blocks(html):
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
-    
     blocks = []
 
     # Helper function to clean up text by removing extra line breaks and whitespace
@@ -1164,7 +1186,6 @@ def html_to_notion_blocks(html):
     # Function to convert a text element to a rich text block
     def text_to_rich_text(element):
         cleaned_content = clean_text(element.get_text(strip=True))
-        # Only return if there is content
         return {
             "type": "text",
             "text": {
@@ -1172,36 +1193,21 @@ def html_to_notion_blocks(html):
             }
         } if cleaned_content else None
 
-    # Function to process a table and convert it to Notion blocks
-    def process_table(table):
-        table_blocks = []
-        for row in table.find_all('tr'):
-            row_cells = []
-            for cell in row.find_all(['td', 'th']):  # Handle both <td> and <th>
-                cell_content = text_to_rich_text(cell)
-                if cell_content:
-                    row_cells.append(cell_content)
-            if row_cells:
-                table_blocks.append({
+    
+    # Function to process lists
+    def process_list(element, list_type):
+        list_blocks = []
+        for li in element.find_all('li'):
+            rich_text = text_to_rich_text(li)
+            if rich_text:
+                list_blocks.append({
                     "object": "block",
-                    "type": "table_row",
-                    "table_row": {
-                        "cells": [[cell] for cell in row_cells]  # Notion table cells are lists of rich text
+                    "type": f"{list_type}_list_item",
+                    f"{list_type}_list_item": {
+                        "rich_text": [rich_text]
                     }
                 })
-        return table_blocks if table_blocks else None
-
-    def is_valid_url(url):
-        regex = re.compile(
-            r'^(https?|ftp)://'  # Protocol
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # Domain
-            r'localhost|'  # Or localhost
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|'  # Or IPv4
-            r'\[?[A-F0-9]*:[A-F0-9:]+\]?)'  # Or IPv6
-            r'(?::\d+)?'  # Optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE
-        )
-        return re.match(regex, url) is not None
+        return list_blocks if list_blocks else None
 
     # Function to process each element and convert it to a Notion block
     def process_element(element):
@@ -1244,7 +1250,7 @@ def html_to_notion_blocks(html):
                 }
 
         elif element.name in ['p', 'div']:
-            # Handle paragraph or div
+            
             rich_text = text_to_rich_text(element)
             if rich_text:
                 block = {
@@ -1254,23 +1260,39 @@ def html_to_notion_blocks(html):
                         "rich_text": [rich_text]
                     }
                 }
+            return block
 
         elif element.name == 'ul':
-            list_blocks = []
-            for li in element.find_all('li'):
-                rich_text = text_to_rich_text(li)
-                if rich_text:
-                    list_blocks.append({
-                        "object": "block",
-                        "type": "bulleted_list_item",
-                        "bulleted_list_item": {
-                            "rich_text": [rich_text]
-                        }
-                    })
-            return list_blocks if list_blocks else None
+            return process_list(element, 'bulleted')
+
+        elif element.name == 'ol':
+            return process_list(element, 'numbered')
 
         elif element.name == 'table':
             return process_table(element)
+
+        elif element.name == 'blockquote':
+            rich_text = text_to_rich_text(element)
+            if rich_text:
+                block = {
+                    "object": "block",
+                    "type": "quote",
+                    "quote": {
+                        "rich_text": [rich_text]
+                    }
+                }
+
+        elif element.name == 'code':
+            rich_text = text_to_rich_text(element)
+            if rich_text:
+                block = {
+                    "object": "block",
+                    "type": "code",
+                    "code": {
+                        "rich_text": [rich_text],
+                        "language": "plain_text"
+                    }
+                }
 
         return block
 
@@ -1283,7 +1305,7 @@ def html_to_notion_blocks(html):
             else:
                 blocks.append(processed_block)
 
-    print("html_to_notion_blocks function Done")
+    print( blocks)
     return blocks
     #=============================================================================================================================================
 #Update ADO Page with Notion Content
@@ -1391,3 +1413,402 @@ def clean_json_payload(payload):
     except Exception as e:
         raise ValueError(f"Error cleaning JSON payload: {e}")
 
+def fetch_child_items(organization, project, parent_work_item_id, pat):
+    """
+    Fetches child items, their types, and status from Azure DevOps.
+    
+    Parameters:
+        ado_url (str): Azure DevOps URL (e.g., "https://dev.azure.com").
+        organization (str): Azure DevOps organization name.
+        project (str): Azure DevOps project name.
+        parent_work_item_id (int): The parent work item ID to fetch children.
+        pat (str): Personal Access Token for Azure DevOps.
+    
+    Returns:
+        list: A list of dictionaries containing child items, their types, and status.
+    """
+    
+    # API endpoint for work items
+    url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{parent_work_item_id}?$expand=relations&api-version=7.0"
+    print (url)
+    # Authentication header
+    response = requests.get(url, auth=HTTPBasicAuth('', pat))
+    print(response)
+    # Fetch parent work item details
+    if response:
+        parent_work_item = response.json()
+  
+    # Extract child items (if any)
+    child_items = []
+    if "relations" in parent_work_item:
+        for relation in parent_work_item["relations"]:
+            if relation["rel"] == "System.LinkTypes.Hierarchy-Forward":  # Child relation
+                # Extract child work item ID
+                child_id = relation["url"].split("/")[-1]
+                
+                # Fetch child work item details
+                child_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{child_id}?api-version=7.0"
+                child_response = requests.get(
+                                child_url,
+                                auth=HTTPBasicAuth('', pat)
+                            )
+                child_work_item = child_response.json()
+                
+                # Extract relevant details
+                child_items.append({
+                    "id": child_work_item["id"],
+                    "type": child_work_item["fields"]["System.WorkItemType"],
+                    "Title": child_work_item["fields"]["System.Title"],
+                    "status": child_work_item["fields"]["System.State"],
+                    "Estimates":child_work_item["fields"].get('Microsoft.VSTS.Scheduling.Effort', 0)
+                })
+    
+    return child_items
+
+def push_dataframe_to_notion(page_id, df):
+    """Push the DataFrame as a table to Notion, creating or updating it under the ADO description."""
+    
+  
+
+    # Step 2: Check if a table exists under the ADO description
+    blocks = get_page_blocks(page_id)
+    table_block_id = None
+    header_exists = False
+    for block in blocks['results']:
+        if block['type'] == 'heading_2' and block['heading_2']['rich_text']:
+            content = block['heading_2']['rich_text'][0]['text']['content']
+            if content == "ADO Description" :
+                ADO_block_id=block['id']
+                if block['has_children']== True:
+                    url = f'https://api.notion.com/v1/blocks/{block['id']}/children'
+                    headers = {
+                        'Authorization': f'Bearer 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',
+                        'Content-Type': 'application/json',
+                        'Notion-Version': '2022-06-28'
+                    }
+                    response = requests.get(url, headers=headers)
+                    print (response)
+                    # After finding the "ADO Description" heading, check for the table under it
+                    if response:
+                        for block in response.json()['results']:                   
+                            print(block)
+                            if block['type'] == 'table':
+                                table_block_id = block['id']
+                                break
+
+                        # Step 3: If table exists, update rows, otherwise create table
+                        if table_block_id:
+                            print("Table found, updating rows...")
+                            # Get the existing table rows and update them, or append new rows if needed
+                            if delete_block(table_block_id) == 1:
+                                table_block_id = create_table(ADO_block_id, df)
+                                if table_block_id :
+                                    print("Update the table .")
+                                    return 1
+                                else:
+                                    print("Failed to update the table rows.")
+                                    return 0
+                            else:
+                                print("Failed to update the table rows.")
+                                return 0
+            if table_block_id is None:
+                print("Table not found, creating a new table...")
+                # Create a new table
+                table_block_id = create_table(ADO_block_id, df)
+                if table_block_id :
+                    print(" Created the table .")
+                    return 1
+                else:
+                    print(" Failed in Created the table .")
+                    return 0
+
+                    
+        
+                
+                
+
+
+def update_table_rows(page_id, table_block_id, df):
+    """Update the rows of an existing table in Notion."""
+    table_data = df.to_dict(orient="records")  # Convert dataframe to a list of dictionaries
+    row_blocks = []
+    header_row_block = {
+        "object": "block",
+        "type": "table_row",
+        "table_row": {
+            "cells": [
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "ID"
+                        },
+                        "plain_text": "ID",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Type"
+                        },
+                        "plain_text": "Type",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Title"
+                        },
+                        "plain_text": "Title",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Status"
+                        },
+                        "plain_text": "Status",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Estimates"
+                        },
+                        "plain_text": "Estimates",
+                        "href": None
+                    }
+                ]
+            ]
+        }
+    }
+    for row in table_data:
+        row_block = {
+            "object": "block",
+            "type": "table_row",
+            "table_row": {
+                "cells": [
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['id'])
+                            },
+                            "plain_text": str(row['id']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['type'])
+                            },
+                            "plain_text": str(row['type']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['Title'])
+                            },
+                            "plain_text": str(row['Title']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['status'])
+                            },
+                            "plain_text": str(row['status']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['Estimates'])
+                            },
+                            "plain_text": str(row['Estimates']),
+                            "href": None
+                        }
+                    ]
+                ]
+            }
+        }
+        row_blocks.append(header_row_block)
+        row_blocks.append(row_block)
+
+    # Assuming we have an API function to append or update rows in an existing table
+    if update_block_childern(table_block_id, row_blocks):
+        return 1
+    else:
+        return 0
+
+
+def create_table(page_id, df):
+    """Create a new table in Notion under the specified page."""
+    print (len(df.columns))
+    table_blocks = [{
+        "object": "block",
+        "type": "table",
+        "table": {
+            "has_column_header": True,
+            "table_width": len(df.columns) # Set table width to number of columns in the DataFrame
+        }
+    }]
+    header_row_block = {
+        "object": "block",
+        "type": "table_row",
+        "table_row": {
+            "cells": [
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "ID"
+                        },
+                        "plain_text": "ID",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Type"
+                        },
+                        "plain_text": "Type",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Title"
+                        },
+                        "plain_text": "Title",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Status"
+                        },
+                        "plain_text": "Status",
+                        "href": None
+                    }
+                ],
+                [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Estimates"
+                        },
+                        "plain_text": "Estimates",
+                        "href": None
+                    }
+                ]
+            ]
+        }
+    }
+    
+    table_data = df.to_dict(orient="records")  # Convert dataframe to a list of dictionaries
+    row_blocks = []
+    row_blocks.append(header_row_block)
+
+    for row in table_data:
+        row_block = {
+            "object": "block",
+            "type": "table_row",
+            "table_row": {
+                "cells": [
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['id'])
+                            },
+                            "plain_text": str(row['id']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['type'])
+                            },
+                            "plain_text": str(row['type']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['Title'])
+                            },
+                            "plain_text": str(row['Title']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['status'])
+                            },
+                            "plain_text": str(row['status']),
+                            "href": None
+                        }
+                    ],
+                    [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": str(row['Estimates'])
+                            },
+                            "plain_text": str(row['Estimates']),
+                            "href": None
+                        }
+                    ]
+                ]
+            }
+        }
+        row_blocks.append(row_block)
+        
+    table_blocks[0]['table']['children'] = row_blocks
+
+    # Append table to the page with the new rows
+    headers = {
+        'Authorization': f'Bearer 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',
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+    }
+    """Append new blocks to the Notion page."""
+    url = f'https://api.notion.com/v1/blocks/{page_id}/children'
+    payload = {"children": table_blocks}  # Wrap blocks in the correct JSON structure
+    response = requests.patch(url, headers=headers, json=payload)
+    res=response.json()
+    print (res)
+    if response.json() : 
+        return 1
+    else:
+        return 0
