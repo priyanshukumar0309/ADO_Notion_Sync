@@ -183,7 +183,7 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
     
     wiql_query = {
         "query": f"""
-        SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.WorkItemType], [System.CreatedDate], [System.ChangedDate]
+        SELECT [System.Id]
         FROM WorkItems
         WHERE ({' OR '.join(area_paths_conditions)})
         AND [System.WorkItemType] IN ('Epic', 'Feature')
@@ -202,7 +202,7 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
     if response.status_code == 200:
         work_items_data = response.json()
         work_item_ids = [item["id"] for item in work_items_data.get("workItems", [])]
-        print(work_item_ids)
+        
         if work_item_ids:
             
             # Fields to fetch
@@ -249,7 +249,8 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
                 info_message.empty()
     
             elapsed_time = time.time() - start_time
-            st.success(f"Fetching Completed in {elapsed_time:.2f} seconds!")
+            st.success(f"Fetching Completed for {len(work_item_ids)} items in {elapsed_time:.2f} seconds!")
+            st
             return batch_detailed_work_items
             info_message=st.info(f"Fetching batch ...")
             # Headers

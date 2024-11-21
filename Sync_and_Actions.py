@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import time
 from requests.auth import HTTPBasicAuth
 import streamlit as st
 import pandas as pd
@@ -308,7 +309,6 @@ def app():
                     for _, row in ADO_Notion_sync_data_filtered_df.iterrows():
                         status, message = update_work_item_description(next(iter([row['ID']])))
                         if status:
-                            st.write(message)
                             st.info('Please reload Notion Details to see updates')
                         else:
                             st.write(message)
@@ -693,7 +693,7 @@ def Sync_ADO_Notion(work_item_id):
     
     #update descriptions in either case
     
-    return (1,"Work item update function Done")
+    return (1,f"Work item update function Done for {work_item_id} - {title} ")
 
 def Create_ADO_items(notion_page,selected_area_path,organization,project,pat):
     # Extract Notion properties with error handling
@@ -817,11 +817,11 @@ def Create_ADO_items(notion_page,selected_area_path,organization,project,pat):
     if response.status_code in (200, 201):
         work_item_id = response.json().get('id')
         if update_notion_page_ado_id(notion_page['id'],work_item_id):
-            return (1, "Work item created :{work_item_id}")
+            return (1, f"Work item created :{work_item_id} - {notion_title} ")
         else:
-            (0,'Failed to update Notion ADO ID')
+            (0,f'Failed to update ADO ID on Notion for {work_item_id} - {notion_title} ')
     else:
-        return (0, "Failed at create ADO item")
+        return (0, f"Failed at create ADO item for {notion_title}")
     #==============================================================================================================================
 
     
@@ -858,16 +858,24 @@ def update_notion_page_ado_id(page_id, ado_id):
         return (0, f"Failed to update Notion page: {response.text}") 
 
 def update_work_item_description(work_item_id):
+    message = st.info(f'Updating notion page for {work_item_id}...')
     #first we update notion page from ADO content
     update=update_notion_description_from_ado(work_item_id)
     if not update:
         return (0,'Notion Page Update Failed')
     #second we update ADO from Notion content
+    message.empty()
+    message = st.success(f'Updated Notion Page for {work_item_id}')
+    
     page_id = fetch_page_id_by_ado_id(work_item_id)
     if not page_id:
         return (0,'Notion Page Fetch Failed')
     # Step 1: Fetch the content from the Notion page
     blocks = fetch_notion_page_content(page_id)
+    time.sleep(0.5)  # Simulate work
+
+    message.empty()
+    message = st.info(f'Updating ADO Page for {work_item_id}...')
     if blocks:
         # Step 2: Convert blocks to HTML
         html_content = convert_notion_blocks_to_html(blocks)
@@ -907,7 +915,10 @@ def update_work_item_description(work_item_id):
                     json=patch_data
                 )
                 if response.status_code == 200:
-                    return (1,'ADO and Notion Synced')
+                    message.empty()
+                    time.sleep(0.5)  # Simulate work
+                    message = st.success(f'Updated ADO Page for {work_item_id}')
+                    return (1,f'ADO and Notion Synced for {work_item_id}')
                 else:
                     return (0,' Notion Update Failed')
             else:
