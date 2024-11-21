@@ -315,7 +315,9 @@ def app():
                         else:
                             st.write(message)
         else:
-            st.success('All items of ADO are already in Notion')
+            st.warning('''No items available to sync descriptions
+            - Please ensure items are available and have IDs matching.
+            - Use the above options to push data to respective systems.''')
        
        
 
