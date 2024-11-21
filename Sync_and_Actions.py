@@ -25,8 +25,10 @@ from Fetch_Notion_Details import  fetch_notion_database_details, DataFrame_from_
 
 
 def app():
-    
+
     st.title("Azure and Notion Databases")
+    with st.expander("## Sync Flow"):
+        st.image('images/ADO_Notion_Sync.png',width=1800)
     st.write("Display details about your Notion databases here.")
     # Add code to fetch and display Notion data
     st.markdown("""
@@ -621,7 +623,7 @@ def Sync_ADO_Notion(work_item_id):
     try:
         status = ado_work_item['fields']['System.State']
     except KeyError:
-        status = '9999-01-01'
+        status = 'Unknown State'
     
     try:
         work_item_type = ado_work_item['fields']['System.WorkItemType']
@@ -865,6 +867,7 @@ def update_work_item_description(work_item_id):
     #first we update notion page from ADO content
     update=update_notion_description_from_ado(work_item_id)
     if not update:
+        print( f'update_notion_description_from_ado Failed: {work_item_id}')
         return (0,'Notion Page Update Failed')
     #second we update ADO from Notion content
     message.empty()
@@ -879,57 +882,52 @@ def update_work_item_description(work_item_id):
 
     message.empty()
     message = st.info(f'Updating ADO Page for {work_item_id}...')
-    if blocks:
         # Step 2: Convert blocks to HTML
-        html_content = convert_notion_blocks_to_html(blocks)
-        if html_content:
-            # Step 3: Remove the 'ADO Description' from Notion Page section if it exists
-            new_notion_description = remove_ado_description_section(html_content)
-            existing_description = fetch_work_item_description(work_item_id)
-            if existing_description:
-                # Regex to match the <h2> Notion Description section and all content until the next <h2> or end of description
-                notion_section_regex = r"(?is)(<h2>\s*Notion Description\s*<\/h2>.*?)(?=<h2>|$)"
-                # Remove the old Notion Description section if it exists
-                updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
+    html_content = convert_notion_blocks_to_html(blocks)
+    # Step 3: Remove the 'ADO Description' from Notion Page section if it exists
+    new_notion_description = remove_ado_description_section(html_content)
+    existing_description = fetch_work_item_description(work_item_id)
+    # Regex to match the <h2> Notion Description section and all content until the next <h2> or end of description
+    notion_section_regex = r"(?is)(<h2>\s*Notion Description\s*<\/h2>.*?)(?=<h2>|$)"
+    # Remove the old Notion Description section if it exists
+    updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
 
 
-                # Append the new Notion Description section
-                updated_description += f"<h2>Notion Description</h2><p>{new_notion_description}</p>"
+        # Append the new Notion Description section
+    updated_description += f"<h2>Notion Description</h2><p>{new_notion_description}</p>"
 
-                # Prepare the JSON patch data to update the description
-                patch_data = [
-                    {
-                        "op": "add" if not existing_description else "replace",
-                        "path": "/fields/System.Description",
-                        "value": updated_description
-                    }
-                ]
-                headers = {
-                'Content-Type': 'application/json-patch+json'
-                }
+    # Prepare the JSON patch data to update the description
+    patch_data = [
+        {
+            "op": "add" if not existing_description else "replace",
+            "path": "/fields/System.Description",
+            "value": updated_description
+        }
+    ]
+    headers = {
+    'Content-Type': 'application/json-patch+json'
+    }
 
 
-                # Send the PATCH request to update the work item
-                patch_url = f"https://dev.azure.com/{st.session_state["global_variable"]["default_organization"]}/{st.session_state["selected_project"]}/_apis/wit/workitems/{work_item_id}?api-version=7.0"
-                response = requests.patch(
-                    patch_url,
-                    headers=headers,
-                    auth=HTTPBasicAuth('', st.session_state["global_variable"]["default_pat"]),
-                    json=patch_data
-                )
-                if response.status_code == 200:
-                    message.empty()
-                    time.sleep(0.5)  # Simulate work
-                    message = st.success(f'Updated ADO Page for {work_item_id}')
-                    return (1,f'ADO and Notion Synced for {work_item_id}')
-                else:
-                    return (0,' Notion Update Failed')
-            else:
-                 return (0,' Notion existing description Failed')
-        else:
-             return (0,' Notion HMTL content Failed')
+    # Send the PATCH request to update the work item
+    patch_url = f"https://dev.azure.com/{st.session_state["global_variable"]["default_organization"]}/{st.session_state["selected_project"]}/_apis/wit/workitems/{work_item_id}?api-version=7.0"
+    response = requests.patch(
+        patch_url,
+        headers=headers,
+        auth=HTTPBasicAuth('', st.session_state["global_variable"]["default_pat"]),
+        json=patch_data
+    )
+    if response.status_code == 200:
+        message.empty()
+        time.sleep(0.5)  # Simulate work
+        message = st.success(f'Updated ADO Page for {work_item_id}')
+        return (1,f'ADO and Notion Synced for {work_item_id}')
     else:
-         return (0,' Notion blocks Failed')
+        return (0,' Notion Update Failed')
+        
+    
+    
+    
 
 def update_notion_description_from_ado(ado_id):
     # Fetch the Notion page details
@@ -964,31 +962,37 @@ def update_notion_description_from_ado(ado_id):
         st.session_state["global_variable"]["default_organization"],
         st.session_state["selected_project"],
         [ado_id])
-    if work_item_details and "System.Description" in work_item_details[0]:
-        # Update Notion page with fetched description
-        existing_description = work_item_details[0]["System.Description"]
-        notion_section_regex = r"(?is)(<h2>\s*Notion Description\s*<\/h2>.*?)(?=<h2>|$)"
-        # Remove the old Notion Description section if it exists
-        updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
-        if update_notion_page_description(notion_page_id, updated_description):
-            child_items = fetch_child_items(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],ado_id, st.session_state["global_variable"]["default_pat"])
-            if child_items :
-                if push_dataframe_to_notion(notion_page_id,pd.DataFrame(child_items)):
-                    print ('All Pushed')
+    if work_item_details :
+        if "System.Description" in work_item_details[0]:
+            # Update Notion page with fetched description
+            existing_description = work_item_details[0]["System.Description"]
+            print (existing_description)
+            notion_section_regex = r"(?is)(<h2>\s*Notion Description\s*<\/h2>.*?)(?=<h2>|$)"
+            # Remove the old Notion Description section if it exists
+            updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
+            if update_notion_page_description(notion_page_id, updated_description):
+                child_items = fetch_child_items(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],ado_id, st.session_state["global_variable"]["default_pat"])
+                if child_items :
+                    if push_dataframe_to_notion(notion_page_id,pd.DataFrame(child_items)):
+                        print ('All Pushed')
+                        return 1
+                    else: 
+                        print ('Child Items table push failed')
+                        return 0
+                else:
+                    print ('Child Items fetch failed')
                     return 1
-                else: 
-                    print ('Child Items table push failed')
-                    return 0
             else:
-                print ('Child Items fetch failed')
+                print ('update_notion_page_description failed')
                 return 0
-        else:
-            print ('update_notion_page_description failed')
-            return 0
 
+        else:
+            print ('no System.Description ')
+            return 1
     else:
-        print ('work_item_details failed')
+        print ('failed work_item_details ')
         return 0
+           
 
 def fetch_page_id_by_ado_id( ado_id):
     """
@@ -1029,7 +1033,6 @@ def fetch_detailed_work_items(organization, project, work_item_ids):
     ids_string = ','.join(map(str, work_item_ids))
     api_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems?ids={ids_string}&api-version=7.1"
     response = requests.get(api_url, auth=HTTPBasicAuth('', st.session_state["global_variable"]["default_pat"]))
-
     if response.status_code == 200:
         detailed_data = response.json()
         work_items = []
@@ -1061,47 +1064,45 @@ def update_notion_page_description(page_id, ado_description):
     header_exists = False
     updated_blocks = []
     content_block= html_to_notion_blocks(ado_description)
-    if content_block:
-        for block in blocks['results']:
-            block_type = block['type']
-            block_content = ""
-            # Extract text from the block
-            if block_type == 'heading_2' and block['heading_2']['rich_text']:
-                block_content = block['heading_2']['rich_text'][0]['text']['content']
-                if block_content == "ADO Description":
-                    header_exists = True
-                    if update_block_childern(block['id'],content_block):
-                    #delete_block(block['id'])
-                        return 1  # Skip appending the original block
-                    else :
-                        print ('update_block_childern failed')
-                        return 0
+    
+    for block in blocks['results']:
+        block_type = block['type']
+        block_content = ""
+        # Extract text from the block
+        if block_type == 'heading_2' and block['heading_2']['rich_text']:
+            block_content = block['heading_2']['rich_text'][0]['text']['content']
+            if block_content == "ADO Description":
+                header_exists = True
+                if update_block_childern(block['id'],content_block):
+                #delete_block(block['id'])
+                    return 1  # Skip appending the original block
+                else :
+                    print ('update_block_childern failed')
+                    return 0
 
-            # Keep other existing blocks as they are
-            #updated_blocks.append(block)
-        if header_exists == False:
-            header_block =[{
-                "object": "block",
-                "type": "heading_2",
-                "heading_2": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": "ADO Description",
-                            },
+        # Keep other existing blocks as they are
+        #updated_blocks.append(block)
+    if header_exists == False:
+        header_block =[{
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "ADO Description",
                         },
-                    ],'is_toggleable': True,
-                },
-            }]
-            if append_blocks(page_id, header_block, content_block):
-                return 1
-            else:
-                print ('append_blocks failed')
-                return 0  
-    else:
-        print ('html_to_notion_blocks failed')
-        return 0
+                    },
+                ],'is_toggleable': True,
+            },
+        }]
+        if append_blocks(page_id, header_block, content_block):
+            return 1
+        else:
+            print ('append_blocks failed')
+            return 0  
+    
    
    
 
@@ -1826,3 +1827,5 @@ def create_table(page_id, df):
         return 1
     else:
         return 0
+
+
