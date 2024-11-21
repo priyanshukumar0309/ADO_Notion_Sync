@@ -196,10 +196,7 @@ def app():
                             else:
                                 st.write(message)
         else:
-            st.warning('''
-            - No more items available to sync.
-            - Please check if items are present in both Notion and ADO 
-            - If not please use above options to push it to respective systems''')
+            st.success('All items of ADO are already in Notion')
 
             # Create a multiselect widget to select ADO Items that are in Notion but not updated (Sync == 1)
         if ADO_data.loc[ADO_data['Sync'] == 'Needs update', 'ID'].tolist():
@@ -228,7 +225,10 @@ def app():
                             st.write(message)
 
         else:
-            st.warning('No more items to Sync in ADO or Notion')
+            st.warning('''
+            - No more items available to sync.
+            - Please check if items are present in both Notion and ADO 
+            - If not please use above options to push it to respective systems''')
         st.markdown("<hr>", unsafe_allow_html=True)
 #=Notion Data===================================================================================================================================
 
@@ -316,9 +316,7 @@ def app():
                         else:
                             st.write(message)
         else:
-            st.warning('''No items available to sync descriptions
-            - Please ensure items are available and have IDs matching.
-            - Use the above options to push data to respective systems.''')
+            st.success('All items of ADO are already in Notion')
        
        
 
