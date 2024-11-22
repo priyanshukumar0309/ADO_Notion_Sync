@@ -30,11 +30,11 @@ def app():
     with st.expander("## Sync Flow"):
         st.image('images/ADO_Notion_Sync.png',width=1800)
     st.write("""
-        - This page shows comparison and actions for Notion and Azure Devops fetched data.
-        - You can push items from ADO to Notion.
-        - You can push items from Notion to ADO.
-        - You can sync between existing items.
-        - You can add update descriptions at both places without overwriting. """)
+        - ##### This page shows comparison and actions for Notion and Azure Devops fetched data.
+        - ##### You can push items from ADO to Notion.
+        - ##### You can push items from Notion to ADO.
+        - ##### You can sync between existing items.
+        - ##### You can add update descriptions at both places without overwriting. """)
     # Add code to fetch and display Notion data
     st.markdown("""
         <ul>
@@ -517,14 +517,13 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
     if target_date:
         data.append( {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.TargetDate", "value": target_date})
     if start_date:
-       data.append(  {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.StartDate", "value": start_date})
+        data.append(  {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.StartDate", "value": start_date})
     response = requests.patch(
         patch_url,
         headers=headers,
         auth=HTTPBasicAuth('', PERSONAL_ACCESS_TOKEN),
         json=data
     )
-    print (data)
     if response.status_code == 200:
         print(f"Updated ADO work item {work_item_id} successfully.")
     else:
@@ -889,11 +888,11 @@ def update_work_item_description(work_item_id):
     message = st.info(f'Updating notion page for {work_item_id}...')
     #first we update notion page from ADO content
     update=update_notion_description_from_ado(work_item_id)
+    message.empty()
     if not update:
         print( f'update_notion_description_from_ado Failed: {work_item_id}')
         return (0,'Notion Page Update Failed')
     #second we update ADO from Notion content
-    message.empty()
     message = st.success(f'Updated Notion Page for {work_item_id}')
     
     page_id = fetch_page_id_by_ado_id(work_item_id)
@@ -906,6 +905,7 @@ def update_work_item_description(work_item_id):
     message.empty()
     message = st.info(f'Updating ADO Page for {work_item_id}...')
         # Step 2: Convert blocks to HTML
+
     html_content = convert_notion_blocks_to_html(blocks)
     # Step 3: Remove the 'ADO Description' from Notion Page section if it exists
     new_notion_description = remove_ado_description_section(html_content)
@@ -989,7 +989,6 @@ def update_notion_description_from_ado(ado_id):
         if "System.Description" in work_item_details[0]:
             # Update Notion page with fetched description
             existing_description = work_item_details[0]["System.Description"]
-            print (existing_description)
             notion_section_regex = r"(?is)(<h2>\s*Notion Description\s*<\/h2>.*?)(?=<h2>|$)"
             # Remove the old Notion Description section if it exists
             updated_description = re.sub(notion_section_regex, "", existing_description, flags=re.DOTALL).strip()
@@ -1212,9 +1211,12 @@ from bs4 import BeautifulSoup
 
 from bs4 import BeautifulSoup
 
+from bs4 import BeautifulSoup
+
 def html_to_notion_blocks(html):
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
+    
     blocks = []
 
     # Helper function to clean up text by removing extra line breaks and whitespace
@@ -1224,28 +1226,13 @@ def html_to_notion_blocks(html):
     # Function to convert a text element to a rich text block
     def text_to_rich_text(element):
         cleaned_content = clean_text(element.get_text(strip=True))
+        # Only return if there is content
         return {
             "type": "text",
             "text": {
                 "content": cleaned_content
             }
         } if cleaned_content else None
-
-    
-    # Function to process lists
-    def process_list(element, list_type):
-        list_blocks = []
-        for li in element.find_all('li'):
-            rich_text = text_to_rich_text(li)
-            if rich_text:
-                list_blocks.append({
-                    "object": "block",
-                    "type": f"{list_type}_list_item",
-                    f"{list_type}_list_item": {
-                        "rich_text": [rich_text]
-                    }
-                })
-        return list_blocks if list_blocks else None
 
     # Function to process each element and convert it to a Notion block
     def process_element(element):
@@ -1288,49 +1275,59 @@ def html_to_notion_blocks(html):
                 }
 
         elif element.name in ['p', 'div']:
+            # Check if paragraph/div contains strong or bold text and adjust accordingly
+            rich_texts = []
+            for child in element.contents:
+                content = clean_text(child.get_text(strip=True))
+                if content:  # Only add if content is non-empty
+                    if child.name in ['strong', 'b']:
+                        rich_texts.append({
+                            "type": "text",
+                            "text": {
+                                "content": content
+                            },
+                            "annotations": {
+                                "bold": True
+                            }
+                        })
+                    elif child.name == 'a':
+                        rich_texts.append({
+                            "type": "text",
+                            "text": {
+                                "content": content,
+                                "link": {"url": child['href']}
+                            }
+                        })
+                    else:
+                        rich_texts.append({
+                            "type": "text",
+                            "text": {
+                                "content": content
+                            }
+                        })
             
-            rich_text = text_to_rich_text(element)
-            if rich_text:
+            if rich_texts:  # Only create block if there's content
                 block = {
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": [rich_text]
+                        "rich_text": rich_texts
                     }
                 }
-            return block
 
         elif element.name == 'ul':
-            return process_list(element, 'bulleted')
-
-        elif element.name == 'ol':
-            return process_list(element, 'numbered')
-
-        elif element.name == 'table':
-            return process_table(element)
-
-        elif element.name == 'blockquote':
-            rich_text = text_to_rich_text(element)
-            if rich_text:
-                block = {
-                    "object": "block",
-                    "type": "quote",
-                    "quote": {
-                        "rich_text": [rich_text]
-                    }
-                }
-
-        elif element.name == 'code':
-            rich_text = text_to_rich_text(element)
-            if rich_text:
-                block = {
-                    "object": "block",
-                    "type": "code",
-                    "code": {
-                        "rich_text": [rich_text],
-                        "language": "plain_text"
-                    }
-                }
+            list_blocks = []
+            for li in element.find_all('li'):
+                rich_text = text_to_rich_text(li)
+                if rich_text:
+                    list_blocks.append({
+                        "object": "block",
+                        "type": "bulleted_list_item",
+                        "bulleted_list_item": {
+                            "rich_text": [rich_text]
+                        }
+                    })
+            return list_blocks if list_blocks else None
 
         return block
 
@@ -1338,13 +1335,14 @@ def html_to_notion_blocks(html):
     for element in soup.find_all(recursive=False):
         processed_block = process_element(element)
         if processed_block:
-            if isinstance(processed_block, list):  # Handle list or table blocks
+            if isinstance(processed_block, list):  # Handle list blocks
                 blocks.extend(processed_block)
             else:
                 blocks.append(processed_block)
 
-    print( blocks)
+    print("html_to_notion_blocks function Done")
     return blocks
+
     #=============================================================================================================================================
 #Update ADO Page with Notion Content
 
@@ -1468,10 +1466,8 @@ def fetch_child_items(organization, project, parent_work_item_id, pat):
     
     # API endpoint for work items
     url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{parent_work_item_id}?$expand=relations&api-version=7.0"
-    print (url)
     # Authentication header
     response = requests.get(url, auth=HTTPBasicAuth('', pat))
-    print(response)
     # Fetch parent work item details
     if response:
         parent_work_item = response.json()
@@ -1525,11 +1521,9 @@ def push_dataframe_to_notion(page_id, df):
                         'Notion-Version': '2022-06-28'
                     }
                     response = requests.get(url, headers=headers)
-                    print (response)
                     # After finding the "ADO Description" heading, check for the table under it
                     if response:
                         for block in response.json()['results']:                   
-                            print(block)
                             if block['type'] == 'table':
                                 table_block_id = block['id']
                                 break
@@ -1845,7 +1839,6 @@ def create_table(page_id, df):
     payload = {"children": table_blocks}  # Wrap blocks in the correct JSON structure
     response = requests.patch(url, headers=headers, json=payload)
     res=response.json()
-    print (res)
     if response.json() : 
         return 1
     else:
