@@ -92,7 +92,14 @@ st.set_page_config(
     page_icon="🌟"             # Emoji as an icon or use a file path for a custom image
                   
 )
-
+        
+st.markdown("""
+        <style>
+            .stButton > button {
+                float: right;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 file_path = 'variable.json'
 st.session_state['file_path'] = file_path
 # Check if the file exists
