@@ -30,13 +30,11 @@ def app():
     with st.expander("## Sync Flow"):
         st.image('images/ADO_Notion_Sync.png',width=1800)
     st.write("""
-         ```
-            - This page shows comparison and actions for Notion and Azure Devops fetched data.
-            - You can push items from ADO to Notion.
-            - You can push items from Notion to ADO.
-            - You can sync between existing items.
-            - You can add update descriptions at both places without overwriting. 
-         ```
+            - # This page shows comparison and actions for Notion and Azure Devops fetched data.
+            - # You can push items from ADO to Notion.
+            - # You can push items from Notion to ADO.
+            - # You can sync between existing items.
+            - # You can add update descriptions at both places without overwriting. 
         """)
     st.markdown("<hr>", unsafe_allow_html=True)
 
