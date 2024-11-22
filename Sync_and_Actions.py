@@ -35,6 +35,8 @@ def app():
         - You can push items from Notion to ADO.
         - You can sync between existing items.
         - You can add update descriptions at both places without overwriting. """)
+    st.markdown("<hr>", unsafe_allow_html=True)
+
     # Add code to fetch and display Notion data
     st.markdown("""
         <ul>
