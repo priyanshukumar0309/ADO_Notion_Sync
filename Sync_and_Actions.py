@@ -189,14 +189,15 @@ def app():
                                 notion_api_key=st.session_state["global_variable"]["NOTION_API_KEY"]
                             )
                             if status:
-                                st.write(message)
-                                database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
-                                if database_details:
-                                    elements_df=DataFrame_from_notionDatabase(database_details)
-                                st.info('Please reload Notion Details to see updates')
-                                st.rerun() 
+                                st.success(message)
+                                
+                                
                             else:
-                                st.write(message)
+                                st.error(message)
+                    refresh_data()
+                    st.info('Please reload Azure Devops to see updates...')
+                    time.sleep(3)
+                    st.rerun() 
         else:
             st.success('All items of ADO are already in Notion')
 
@@ -217,14 +218,15 @@ def app():
                     for _, row in ADO_filtered_df_to_sync.iterrows():
                         status, message = Sync_ADO_Notion(next(iter([row['ID']])))
                         if status:
-                            st.write(message)
-                            database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
-                            if database_details:
-                                elements_df=DataFrame_from_notionDatabase(database_details)
-                            st.info('Please reload Notion Details to see updates')
-                            st.rerun()
+                            st.success(message)
+                            
                         else:
-                            st.write(message)
+                            st.error(message)
+                    refresh_data()
+                    st.info('Please reload Azure Devops to see updates...')
+                    time.sleep(3)
+                    st.rerun()
+
 
         else:
             st.warning('''
@@ -277,18 +279,16 @@ def app():
                                         
                                     )
                                     if status:
-                                        st.write(message)
-                                        work_items = fetch_work_items_by_area_paths(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],st.session_state["selected_area_paths"], st.session_state["global_variable"]["default_pat"])
-                                        if 'error' in work_items:
-                                            st.error(work_items['error'])
-                                        else:
-                                            # Prepare data for table
-                                            table_data = DataFrame_from_workitems(work_items)
-                                        st.info('Please reload Azure Devops to see updates')
-                                        st.rerun()
+                                        st.success(message)
+                                        
+                                        
                                         
                                     else:
-                                        st.write(message)
+                                        st.error(message)
+                            refresh_data()
+                            st.info('Please reload Azure Devops to see updates...')
+                            time.sleep(3)
+                            st.rerun()
         else:
             st.warning('Name and Type must be present to create ADO item. No more items to create ')
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -316,12 +316,23 @@ def app():
                         if status:
                             st.info('Please reload Notion Details to see updates')
                         else:
-                            st.write(message)
+                            st.error(message)
         else:
             st.success('All items of ADO are already in Notion')
        
-       
-
+def refresh_data():
+    database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
+    if database_details:
+        elements_df=DataFrame_from_notionDatabase(database_details)
+        st.info('Please reload Notion Details to see updates')
+    work_items = fetch_work_items_by_area_paths(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],st.session_state["selected_area_paths"], st.session_state["global_variable"]["default_pat"])
+    if 'error' in work_items:
+        st.error(work_items['error'])
+    else:
+        # Prepare data for table
+        table_data = DataFrame_from_workitems(work_items)
+    st.session_state["ADO_data"] = table_data
+    st.session_state["Notion_data"]=elements_df 
 
 
 # Functions for Notion
@@ -494,21 +505,29 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
     # Construct the data to be updated
     data = [
         {"op": "replace", "path": "/fields/System.Title", "value": title},
-        {"op": "replace", "path": "/fields/Custom.EffortForSAFe", "value": estimate},
-        {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.TargetDate", "value": target_date},
-        {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.StartDate", "value": start_date},
+        {"op": "replace", "path": "/fields/Custom.EffortForSAFe", "value": estimate}
+
+       
     ]
+    if target_date:
+        data.append( {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.TargetDate", "value": target_date})
+    if start_date:
+       data.append(  {"op": "replace", "path": "/fields/Microsoft.VSTS.Scheduling.StartDate", "value": start_date})
     response = requests.patch(
         patch_url,
         headers=headers,
         auth=HTTPBasicAuth('', PERSONAL_ACCESS_TOKEN),
         json=data
     )
+    print (data)
     if response.status_code == 200:
         print(f"Updated ADO work item {work_item_id} successfully.")
     else:
         print(f"Failed to update ADO work item: {response.status_code} - {response.text}")
-    
+    try:
+        ado_last_edited_date = response.json()['fields']['System.ChangedDate']
+    except KeyError:
+        ado_last_edited_date = ''
     url = f"https://api.notion.com/v1/pages/{notion_page_id}"
     headers2 = {
         "Authorization": f"Bearer {st.session_state["global_variable"]["NOTION_API_KEY"]}",
@@ -538,7 +557,6 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
         print(f"Updated Notion page {notion_page_id} successfully.")
     else:
         print(f"Failed to update Notion page: {response.status_code} - {response.text}")
-        st.write('didnt work')
 
 def update_notion_page(page_id, title, status, work_item_type, target_date, start_date,Estimate,ado_last_edited_date, NOTION_API_KEY):
     """
@@ -675,12 +693,12 @@ def Sync_ADO_Notion(work_item_id):
     try:
         notion_start_date = notion_page['properties']['Date']['date']['start']
     except KeyError:
-        notion_start_date = ' '
+        notion_start_date = None
     
     try:
         notion_target_date = notion_page['properties']['Date']['date']['end']
     except KeyError:
-        notion_target_date = ' '
+        notion_target_date = notion_start_date
         
         
     notion_last_edited_date = notion_page['properties']['Last edited time']['last_edited_time']
