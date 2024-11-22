@@ -20,10 +20,10 @@ def add_floating_button():
     /* Floating button styles */
     .floating-button {{
         position: fixed;
-        bottom: 20px;   /* Fixed distance from the bottom */
-        right: 20px;    /* Fixed distance from the right */
-        width: 60px;
-        height: 60px;
+        bottom: 7px;   /* Fixed distance from the bottom */
+        right: 15px;    /* Fixed distance from the right */
+        width: 55px;
+        height: 55px;
         background-color: #f39c12;
         color: white;
         border: none;
@@ -43,7 +43,7 @@ def add_floating_button():
     .toast {{
         visibility: hidden;
         position: fixed;
-        bottom: 100px;
+        bottom: 10px;
         right: 20px;
         background-color: rgba(0, 0, 0, 0.75);
         color: white;
