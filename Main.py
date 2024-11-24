@@ -100,21 +100,26 @@ st.markdown("""
             }
         </style>
     """, unsafe_allow_html=True)
-file_path = 'variable.json'
-st.session_state['file_path'] = file_path
-# Check if the file exists
+# Define a default JSON structure for global variables
+default_variables = {
+    "default_organization": "temp",
+    "default_pat": "o5nggeu2u4tkvalw563kzrczjwy5g5ruuibbnva6xgk3jbq3vgra",
+    "NOTION_API_KEY": "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"
+}
+
+# File path to store the variables (per user, if logged in)
+file_path = 'variables.json'
+
+# Check if the file exists, otherwise use default values
 if os.path.exists(file_path):
-    # Open the file safely using `with` statement
     with open(file_path, 'r') as file:
         global_variable = json.load(file)
 else:
-    # Default values if the file does not exist
-    global_variable = {
-        "default_organization": "temp",
-        "default_pat": "o5nggeu2u4tkvalw563kzrczjwy5g5ruuibbnva6xgk3jbq3vgra",
-        "NOTION_API_KEY": "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"
-    }
-st.session_state["global_variable"]=global_variable
+    global_variable = default_variables
+
+# Save global_variable to session state
+st.session_state["file_path"] = file_path
+st.session_state["global_variable"] = global_variable
 PAGES = {
     "Home": home_app,
     "Documentation": documentation_app,

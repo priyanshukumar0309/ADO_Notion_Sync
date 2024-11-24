@@ -18,8 +18,9 @@ def app():
     st.info("Connect your Azure DevOps database API and display details.", icon="ℹ️")
     st.warning('Please provide both organization and personal access token.')
     # Default values for Organization and Personal Access Token
-    default_organization =  st.session_state["global_variable"]["default_organization"] 
-    default_pat = st.session_state["global_variable"]["default_pat"]  # Replace with your PAT or make it dynamic
+    # Access current variables from session state
+    default_organization = st.session_state["global_variable"].get("default_organization", "")
+    default_pat = st.session_state["global_variable"].get("default_pat", "")
     
     # Input fields for Organization and Personal Access Token
    
@@ -32,8 +33,13 @@ def app():
     if st.button("Save Variable"):
         st.session_state["global_variable"]["default_pat"] = personal_access_token
         st.session_state["global_variable"]["default_organization"] = organization
-        with open(st.session_state['file_path'], 'w') as file:
-            json.dump(st.session_state["global_variable"], file)
+        # Write to the JSON file
+        try:
+            with open(st.session_state["file_path"], 'w') as file:
+                json.dump(st.session_state["global_variable"], file)
+            st.success("Variables saved successfully!")
+        except Exception as e:
+            st.error(f"An error occurred while saving: {e}")
     st.markdown("<hr>", unsafe_allow_html=True)
     
     table_data = []  # Initialize table_data

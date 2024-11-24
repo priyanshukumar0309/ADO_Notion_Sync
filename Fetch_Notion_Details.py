@@ -22,8 +22,8 @@ def app():
     st.info("Connect your Notion database API and display details.",  icon="ℹ️")
     
     # Default API key (you can set this to your actual API key)
-    NOTION_API_KEY = st.session_state["global_variable"]["NOTION_API_KEY"]
-    
+    NOTION_API_KEY = st.session_state["global_variable"].get("NOTION_API_KEY","")
+
     # Input for API Key
     notion_api_key = st.text_input("Notion API Key", value=NOTION_API_KEY, type="password")
     if st.button("Save Variable"):
