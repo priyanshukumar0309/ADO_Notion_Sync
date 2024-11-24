@@ -169,6 +169,7 @@ def app():
         st.markdown("<hr>", unsafe_allow_html=True)
 #ADO Data====================================================================================================================================
         st.write("### Azure Devops -> Notion")
+        st.write("#### Create Pages on Notion")
         if ADO_data.loc[ADO_data['Sync'] == 'Missing', 'ID'].tolist():
             
             
@@ -225,12 +226,13 @@ def app():
             st.success('All items of ADO are already in Notion')
 
             # Create a multiselect widget to select ADO Items that are in Notion but not updated (Sync == 1)
+        st.write("#### Update Pages on Notion")
+    
         if ADO_data.loc[ADO_data['Sync'] == 'Needs update', 'ID'].tolist():
             
             ADO_filtered_df_to_sync_unique_types = ADO_data['Work Item Type'].unique().tolist()
     
             # Step 4: Create a checkbox section for filtering by 'type'
-            st.markdown("### Filter by Work Item Type")
             ADO_filtered_df_to_sync_unique_types_elected_work_item_types = st.multiselect(
                 "Select Work Item Types to Include:",
                 options=ADO_filtered_df_to_sync_unique_types,
