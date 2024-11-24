@@ -101,11 +101,7 @@ st.markdown("""
         </style>
     """, unsafe_allow_html=True)
 # Define a default JSON structure for global variables
-default_variables = {
-    "default_organization": "temp",
-    "default_pat": "o5nggeu2u4tkvalw563kzrczjwy5g5ruuibbnva6xgk3jbq3vgra",
-    "NOTION_API_KEY": "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"
-}
+
 
 # File path to store the variables (per user, if logged in)
 file_path = 'variables.json'
@@ -115,6 +111,11 @@ if os.path.exists(file_path):
     with open(file_path, 'r') as file:
         global_variable = json.load(file)
 else:
+    default_variables = {
+        "default_organization": "temp",
+        "default_pat": "o5nggeu2u4tkvalw563kzrczjwy5g5ruuibbnva6xgk3jbq3vgra",
+        "NOTION_API_KEY": "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"
+    }
     global_variable = default_variables
 
 # Save global_variable to session state
