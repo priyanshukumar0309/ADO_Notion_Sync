@@ -75,11 +75,59 @@ def app():
                 if 'area_paths' in st.session_state:
                     area_paths = st.session_state.area_paths
                     selected_area_paths = st.multiselect("Select Area Paths", area_paths)
-                    if selected_area_paths:
+                    status ,work_item_types=allowed_work_itemtypes(organization,selected_project,personal_access_token)
+                    if status:
+                        preselected_types = ['Epic', 'Feature',]  # Preselected items
+                        common_types = ['Epic', 'Feature', 'Story', 'Task', 'Bug']  # Common types (preselected + non-preselected)
+                        blocked_types = ['Story', 'Task','Test Case','Test Suite','Test Plan','PI Objective']  # Blocked items
+                        
+                        # Streamlit UI to display options as checkboxes
+                        st.write("Select Work Item Types:")
+                        select_all = st.checkbox("Select All")
+                        selected_work_item_types = []
+                        common_types = [name for name in common_types if name in work_item_types]
+                        remaining_types = [name for name in work_item_types if name not in common_types]
+                        st.write("#### Common")
+                        common_cols = st.columns(3)  # Create columns for better layout
+                        for i, work_item_name in enumerate(common_types):
+                            if work_item_name in blocked_types:
+                                    # Display blocked items as disabled checkboxes
+                                common_cols[i % 3].checkbox(work_item_name, value=False, disabled=True, key=f"Blockedincommon-{work_item_name}")
+                            # Determine the checkbox's default value
+                            else:
+                                if work_item_name in preselected_types:
+                                    default_value = (work_item_name in preselected_types)  # Preselected and not blocked)  # Preselected i
+                                else:
+                                    default_value = select_all 
+                                selected = common_cols[i % 3].checkbox(work_item_name, value=default_value,key=f"CommonType-{work_item_name}")
+                                if selected:
+                                    selected_work_item_types.append(work_item_name)
+
+                        # Render "Other Types" below
+                        with st.expander("Others"):
+                            remaining_cols = st.columns(3)  # Create columns for better layout
+                            for i, work_item_name in enumerate(remaining_types):
+                                if work_item_name in blocked_types:
+                                    # Display blocked items as disabled checkboxes
+                                    remaining_cols[i % 3].checkbox(work_item_name, value=False, disabled=True, key=f"Blocked-{work_item_name}")
+                                else:
+                                    if work_item_name in preselected_types:
+                                        default_value = (work_item_name in preselected_types)  # Preselected and not blocked)  # Preselected i
+                                    else:
+                                        # Render enabled checkboxes and collect selected values
+                                        default_value = select_all
+                                    selected = remaining_cols[i % 3].checkbox(work_item_name, value=default_value, key=f"OtherType-{work_item_name}")
+                                    if selected:
+                                        selected_work_item_types.append(work_item_name)
+
+
+
+                    if selected_area_paths and selected_work_item_types:
+                        st.session_state["selected_work_item_types"] = selected_work_item_types
                         st.session_state["selected_area_paths"] = selected_area_paths
         
                         if st.button("Fetch work items"):
-                            work_items = fetch_work_items_by_area_paths(organization, selected_project, selected_area_paths, personal_access_token)
+                            work_items = fetch_work_items_by_area_paths(organization, selected_project,st.session_state["selected_work_item_types"], selected_area_paths, personal_access_token)
                             if 'error' in work_items:
                                 st.error(work_items['error'])
                             else:
@@ -173,7 +221,6 @@ def fetch_azure_projects(organization, personal_access_token):
 
     try:
         response = requests.get(api_url, auth=HTTPBasicAuth('', personal_access_token), headers=headers)
-        print(response)
         if response.status_code == 200:
             projects = response.json().get('value', [])
             return (1,[project['name'] for project in projects])
@@ -182,7 +229,7 @@ def fetch_azure_projects(organization, personal_access_token):
     except requests.exceptions.RequestException as e:
         return (0,[{"error": "Request failed", "details": str(e)}])
 
-def fetch_work_items_by_area_paths(organization, project, area_paths, personal_access_token, batch_size=50):
+def fetch_work_items_by_area_paths(organization, project,selected_work_item_types, area_paths, personal_access_token, batch_size=50):
     if not area_paths:
         return {"error": "No area paths found."}
 
@@ -194,11 +241,10 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
         SELECT [System.Id], [System.Title], [System.State], [System.AssignedTo], [System.WorkItemType], [System.CreatedDate], [System.ChangedDate]
         FROM WorkItems
         WHERE ({' OR '.join(area_paths_conditions)})
-        AND [System.WorkItemType] IN ('Epic', 'Feature')
+        AND [System.WorkItemType] IN ({', '.join([f"'{t}'" for t in selected_work_item_types])})
         ORDER BY [System.CreatedDate] DESC
         """
     }
-
     api_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/wiql?api-version=7.1"
     headers = {"Content-Type": "application/json"}
 
@@ -238,21 +284,21 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
             batches = [work_item_ids[i:i + max_batch_size] for i in range(0, len(work_item_ids), max_batch_size)]
    
             start_time = time.time()
-            for idx, batch in enumerate(batches, start=1):
-                payload = {
-                    "ids": batch,
-                    "fields": fields
-                }
-            
-                info_message = st.info(f"Fetching batch {idx}/{len(batches)}...")
-                response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
-                if response.status_code == 200:
-                    batch_items = response.json().get('value', [])
-                    batch_detailed_work_items.extend(batch_items)
-                else:
-                    st.error(f"Error fetching batch {idx}: {response.status_code} {response.text}")
+            with st.spinner(f"Fetching  {len(batches)} batches..."):
+                for idx, batch in enumerate(batches, start=1):
+                    payload = {
+                        "ids": batch,
+                        "fields": fields
+                    }
                 
-            info_message.empty()
+                    
+                    response = requests.post(url, auth=HTTPBasicAuth('', personal_access_token), json=payload)
+                    if response.status_code == 200:
+                        batch_items = response.json().get('value', [])
+                        batch_detailed_work_items.extend(batch_items)
+                    else:
+                        st.error(f"Error fetching batch {idx}: {response.status_code} {response.text}")
+                
             elapsed_time = time.time()-start_time
             st.success(f"Fetching Completed for {len(work_item_ids)} items in {elapsed_time:.2f} seconds!")
                 
@@ -262,3 +308,19 @@ def fetch_work_items_by_area_paths(organization, project, area_paths, personal_a
     else:
         return {"error": f"Error: {response.status_code} {response.text}"}
 
+
+def allowed_work_itemtypes(organization,project, pat):
+    url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitemtypes?api-version=7.1"
+
+    response = requests.get(
+        url,
+        auth=HTTPBasicAuth('', pat)
+    )
+
+    if response.status_code == 200:
+        response_json= response.json().get('value', [])
+        work_item_types = [item['name'] for item in response_json]        
+        return (1,work_item_types)
+    else:
+        return (0, f"Error fetching {response.status_code} {response.text}")
+        

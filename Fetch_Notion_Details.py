@@ -34,7 +34,7 @@ def app():
 
     # Button to fetch Notion Databases
     if st.button("Fetch Notion Databases"):
-        message =st.info('Fetching Notion Databases')
+        message =st.info('Fetching Notion Databases...')
         if notion_api_key:
             notion_databases = fetch_all_notion_databases(notion_api_key)
             if notion_databases:
@@ -60,7 +60,7 @@ def app():
             # Fetch data from Notion API using the selected database ID
             info_message=st.info("Fetching data from Notion...")
             st.session_state["selected_db_id"] = selected_db_id
-            st.session_state["Notion_DB_Name"] = selected_db
+            st.session_state["Notion_DB_Name"] = next(db['name'] for db in st.session_state.databases if db['id'] == selected_db_id)
             
             database_details = fetch_notion_database_details(notion_api_key, selected_db_id)
             if database_details:
@@ -68,31 +68,39 @@ def app():
             info_message.empty()
         
         if 'database_details' in st.session_state :
-            elements_df=DataFrame_from_notionDatabase(st.session_state['database_details'])
-            if not elements_df.empty:
-                missing_properties = validate_schema(st.session_state["properties"],st.session_state["selected_db_id"],st.session_state["global_variable"]["NOTION_API_KEY"])
-                print (missing_properties)
-                if missing_properties:
-                    if st.button('Add Missing Properties'):
-                        print ('buton worked')
-                        if add_missing_properties(missing_properties,st.session_state["selected_db_id"],st.session_state["global_variable"]["NOTION_API_KEY"]):
-                            time.sleep(3)
-                            database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
-                            if database_details:
-                                st.session_state['database_details']=database_details
+            if st.session_state['database_details'] is not None:
+                elements_df=DataFrame_from_notionDatabase(st.session_state['database_details'])
+                if not elements_df.empty:
+                    missing_properties = validate_schema(st.session_state["properties"],st.session_state["selected_db_id"],st.session_state["global_variable"]["NOTION_API_KEY"])
+                    print (missing_properties)
+                    if missing_properties:
+                        if st.button('Add Missing Properties'):
+                            print ('buton worked')
+                            if add_missing_properties(missing_properties,st.session_state["selected_db_id"],st.session_state["global_variable"]["NOTION_API_KEY"]):
+                                time.sleep(3)
+                                database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
+                                if database_details:
+                                    st.session_state['database_details']=database_details
 
-                st.write("### Database Content:",st.session_state["selected_db"])
-                st.session_state["Notion_data"]=elements_df 
-                st.dataframe(elements_df)
-                
-            else:
-                st.error('Database Failed')
+                    st.write(f"""
+                        #### Database Content:
+                        **Database:** {st.session_state["Notion_DB_Name"]}""")
+                    st.write(f""" **Database ID:** {st.session_state["selected_db_id"]}""")
+                    st.session_state["Notion_data"]=elements_df 
+                    st.dataframe(elements_df)
+                    
+                else:
+                    st.error('Database Failed')
                
         elif "Notion_data" in st.session_state:
             properties = st.session_state["properties"] 
             selected_db_id = st.session_state["selected_db_id"] 
             Notion_data = st.session_state["Notion_data"]
-            st.write("### Previously Fetched Data:",st.session_state["Notion_DB_Name"])
+            st.write(f"""
+                ### Last Fetched Database Content:
+                **Database Name:** {st.session_state["Notion_DB_Name"]}
+                **Database ID:** {st.session_state["selected_db_id"]}
+                """)
             st.dataframe(Notion_data)
             
 
@@ -175,9 +183,9 @@ def store_data(database_details):
     
     Args:
         database_details (dict): The database information and elements.
-        output_file (str): The path of the output Excel file.
     """
     # Extract headers from database properties
+    print (f'Database{database_details}')
     properties = database_details.get("database_info", {}).get("properties", {})
     headers = extract_headers_from_properties(properties)
     
@@ -312,8 +320,7 @@ def validate_schema(properties,DATABASE_ID,NOTION_API_KEY):
             st.write(f"- {prop}")
         return missing_properties
     else:
-        st.success("All required properties are already present in the database.")
-
+        print("All required properties are already present in the database.")
         return 0
     
     # Validate presence of "last_edited_time"

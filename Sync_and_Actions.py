@@ -21,7 +21,7 @@ import functools
 from Fetch_ADO_Details import fetch_work_items_by_area_paths, DataFrame_from_workitems
 from Fetch_Notion_Details import  fetch_notion_database_details, DataFrame_from_notionDatabase
 
-
+import time
 
 
 def app():
@@ -29,20 +29,27 @@ def app():
     st.title("Azure and Notion Databases")
     with st.expander("## Sync Flow"):
         st.image('images/ADO_Notion_Sync.png',width=1800)
-    st.write("""
-        - ##### This page shows comparison and actions for Notion and Azure Devops fetched data.
-        - ##### You can push items from ADO to Notion.
-        - ##### You can push items from Notion to ADO.
-        - ##### You can sync between existing items.
-        - ##### You can add update descriptions at both places without overwriting. """)
+    
     # Add code to fetch and display Notion data
     st.markdown("""
         <ul>
             <li><span style="background-color: red; color: white;">Red</span> means missing items in other board</li>
             <li><span style="background-color: yellow; color: black;">Yellow</span> means items present on both boards but out of sync</li>
             <li><span style="background-color: green; color: white;">Green</span> means items present on both boards and in sync</li>
+            <li><Strong>'Sync'</Strong> column provides the same status</li>
         </ul>
+        
     """, unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    with st.expander('### Steps'):
+        st.write("""
+            -  This page shows comparison of Data from ADO and Notion.
+            -  Depending upon, if item is missing or out of sync from other board you can take actions.
+            -  You can push items from ADO to Notion.
+            -  You can push items from Notion to ADO.
+            -  You can sync between existing items.
+            -  You can update descriptions at both places without ***overwriting.*** """)
+
     # Check if data exists in session state
     st.markdown("<hr>", unsafe_allow_html=True)
     if "Notion_data" not in st.session_state:
@@ -153,31 +160,42 @@ def app():
 
             
         # Display the dataframes in Streamlit
-        st.write("### Notion Data:")
+        st.write("##### Notion Data")
         st.dataframe(styled_notion, use_container_width=True)
        
         
-        st.write("### ADO Data:")
+        st.write("##### ADO Data")
         st.dataframe(styled_ado, use_container_width=True)       
         st.markdown("<hr>", unsafe_allow_html=True)
 #ADO Data====================================================================================================================================
-        st.write("### ADO Items not in Notion")
+        st.write("### Azure Devops -> Notion")
         if ADO_data.loc[ADO_data['Sync'] == 'Missing', 'ID'].tolist():
             
+            
+            ADO_filtered_df_to_add_unique_types = ADO_data['Work Item Type'].unique().tolist()
+    
+            # Step 4: Create a checkbox section for filtering by 'type'
+            ADO_filtered_df_to_add_unique_types_elected_work_item_types = st.multiselect(
+                "Select Work Item Types to Include:",
+                options=ADO_filtered_df_to_add_unique_types,
+                key="ADO_filtered_df_to_add_unique_types_elected_work_item_types"
+            )
+            ADO_filtered_df_to_add = ADO_data[ADO_data['Work Item Type'].isin(ADO_filtered_df_to_add_unique_types_elected_work_item_types)]
+
             # Create a multiselect widget to select ADO Items that are not present in Notion (Sync == 0)
             selected_not_sync_values = st.multiselect(
-                "ADO Items not present in Notion",
-                options=ADO_data.loc[ADO_data['Sync'] == 'Missing', 'ID'].tolist(),
-                default=ADO_data.loc[ADO_data['Sync'] == 'Missing', 'ID'].tolist()   # Default to the same list
+                "ADO Items ****Missing**** in Notion",
+                options=ADO_filtered_df_to_add.loc[ADO_filtered_df_to_add['Sync'] == 'Missing', 'ID'].tolist(),
+                default=ADO_filtered_df_to_add.loc[ADO_filtered_df_to_add['Sync'] == 'Missing', 'ID'].tolist()   # Default to the same list
             )
 
             # Filter the DataFrame based on the selected sync values for non-synced items (Sync == 0)
-            ADO_data_filtered_df = ADO_data[ADO_data['ID'].isin(selected_not_sync_values)]
+            ADO_filtered_df_to_add = ADO_filtered_df_to_add[ADO_filtered_df_to_add['ID'].isin(selected_not_sync_values)]
 
-            if not ADO_data_filtered_df.empty:
-                st.dataframe(ADO_data_filtered_df)
+            if not ADO_filtered_df_to_add.empty:
+                st.dataframe(ADO_filtered_df_to_add)
                 if st.button("Create Notion Pages"):
-                    for _, row in ADO_data_filtered_df.iterrows():
+                    for _, row in ADO_filtered_df_to_add.iterrows():
                         # Fetch work item details from Azure DevOps
                         work_item_details = fetch_ado_work_item(
                             row['ID'], 
@@ -208,14 +226,27 @@ def app():
 
             # Create a multiselect widget to select ADO Items that are in Notion but not updated (Sync == 1)
         if ADO_data.loc[ADO_data['Sync'] == 'Needs update', 'ID'].tolist():
+            
+            ADO_filtered_df_to_sync_unique_types = ADO_data['Work Item Type'].unique().tolist()
+    
+            # Step 4: Create a checkbox section for filtering by 'type'
+            st.markdown("### Filter by Work Item Type")
+            ADO_filtered_df_to_sync_unique_types_elected_work_item_types = st.multiselect(
+                "Select Work Item Types to Include:",
+                options=ADO_filtered_df_to_sync_unique_types,
+                key="ADO_filtered_df_to_sync_unique_types_elected_work_item_types"
+            )
+            ADO_filtered_df_to_sync = ADO_data[ADO_data['Work Item Type'].isin(ADO_filtered_df_to_sync_unique_types_elected_work_item_types)]
+
             selected_to_sync_values = st.multiselect(
-                "ADO Items not updated in Notion",
-                options=ADO_data.loc[ADO_data['Sync'] == 'Needs update', 'ID'].tolist(),
-                default=ADO_data.loc[ADO_data['Sync'] == 'Needs update', 'ID'].tolist()  # Default to the same list
+                "ADO Items ****Not Updated**** in Notion",
+                options=ADO_filtered_df_to_sync.loc[ADO_filtered_df_to_sync['Sync'] == 'Needs update', 'ID'].tolist(),
+                default=ADO_filtered_df_to_sync.loc[ADO_filtered_df_to_sync['Sync'] == 'Needs update', 'ID'].tolist()  # Default to the same list
             )
 
             # Filter the DataFrame based on the selected sync values for items that are in Notion but not updated (Sync == 1)
-            ADO_filtered_df_to_sync = ADO_data[ADO_data['ID'].isin(selected_to_sync_values)]
+            ADO_filtered_df_to_sync = ADO_filtered_df_to_sync[ADO_filtered_df_to_sync['ID'].isin(selected_to_sync_values)]
+
 
             if not ADO_filtered_df_to_sync.empty:
                 st.dataframe(ADO_filtered_df_to_sync)
@@ -241,7 +272,7 @@ def app():
         st.markdown("<hr>", unsafe_allow_html=True)
 #=Notion Data===================================================================================================================================
 
-        st.write("### Notion Items not in ADO")
+        st.write("### Notion -> Azure Devops")
         filtered_notion_data = Notion_data[
             (Notion_data['Sync'] == 'Missing') & 
             Notion_data['Name'].notnull() & 
@@ -250,20 +281,33 @@ def app():
             Notion_data['Type'].str.strip().ne('')
             ]
         # Create a multiselect widget to select ADO Items that are not present in Notion (Sync == 0)
-        if filtered_notion_data.loc[filtered_notion_data['Sync'] == 'Missing', 'id'].tolist():
+        if filtered_notion_data.loc[filtered_notion_data['Sync'] == 'Missing', 'Name'].tolist():
+            
+            Notion_data_filtered_df_unique_types = filtered_notion_data['Type'].unique().tolist()
+    
+            # Step 4: Create a checkbox section for filtering by 'type'
+            Notion_data_filtered_df_selected_work_item_types = st.multiselect(
+                "Select Work Item Types to Include:",
+                options=Notion_data_filtered_df_unique_types,
+                key="Notion_data_filtered_df_selected_work_item_types"
+            )
+
+            # Step 5: Further filter the DataFrame based on selected work item types
+            Notion_data_filtered_df = filtered_notion_data[filtered_notion_data['Type'].isin(Notion_data_filtered_df_selected_work_item_types)]
+
             selected_not_in_ADO_values = st.multiselect(
-                "ADO Items not present in Notion",
-                options=filtered_notion_data.loc[filtered_notion_data['Sync'] == 'Missing', 'id'].tolist(),
-                default=filtered_notion_data.loc[filtered_notion_data['Sync'] == 'Missing', 'id'].tolist(),
+                "Notion Pages ****Missing**** in Azure Devops",
+                options=Notion_data_filtered_df.loc[Notion_data_filtered_df['Sync'] == 'Missing', 'Name'].tolist(),
+                default=Notion_data_filtered_df.loc[Notion_data_filtered_df['Sync'] == 'Missing', 'Name'].tolist(),
                 key="not_in_ado_multiselect"    # Default to the same list
             )
             # Filter the DataFrame based on the selected sync values for non-synced items (Sync == 0)
-            Notion_data_filtered_df = Notion_data[Notion_data['id'].isin(selected_not_in_ADO_values)]
+            Notion_data_filtered_df = Notion_data_filtered_df[Notion_data_filtered_df['Name'].isin(selected_not_in_ADO_values)]
 
             if not Notion_data_filtered_df.empty:
                 st.dataframe(Notion_data_filtered_df)
                 if st.session_state["selected_area_paths"]:
-                    selected_area_path = st.selectbox("Select a Area Path",options=[""] +  st.session_state["selected_area_paths"])
+                    selected_area_path = st.selectbox("Select a Area Path to Creat ADO work Items",options=[""] +  st.session_state["selected_area_paths"])
                     if selected_area_path:
                         selected_area_path = selected_area_path.replace("\\", "\\\\")
                         if st.button("Create ADO Work Item"):
@@ -297,21 +341,33 @@ def app():
         else:
             st.warning('Name and Type must be present to create ADO item. No more items to create ')
         st.markdown("<hr>", unsafe_allow_html=True)
-## Just descriptions:        
-        st.write("### Sync Descriptions")
+## Just descriptions:=======================================================================      
+        st.write("### Sync Descriptions 🔄")
         if ADO_data.loc[ADO_data['Sync'] != 'Missing', 'ID'].tolist():
             
             # Create a multiselect widget to select ADO Items that are not present in Notion (Sync == 0)
+            
+            ADO_Notion_sync_data_unique_types = ADO_data['Work Item Type'].unique().tolist()
+    
+            # Step 4: Create a checkbox section for filtering by 'type'
+            st.markdown("### Filter by Work Item Type")
+            ADO_Notion_sync_data_selected_work_item_types = st.multiselect(
+                "Select Work Item Types to Include:",
+                options=ADO_Notion_sync_data_unique_types,
+                key="ADO_Notion_sync_data_selected_work_item_types"
+            )
+            ADO_Notion_sync_data_filtered_df = ADO_data[ADO_data['Work Item Type'].isin(ADO_Notion_sync_data_selected_work_item_types)]
+            
             ADO_Notion_sync_data_sync_values = st.multiselect(
-                "These are all items which are can be synced for descriptions",
-                options=ADO_data.loc[ADO_data['Sync'] != 'Missing', 'ID'].tolist(),
-                default=ADO_data.loc[ADO_data['Sync'] != 'Missing', 'ID'].tolist(),
+                "These are all items which are present and can be synced for descriptions",
+                options=ADO_Notion_sync_data_filtered_df.loc[ADO_Notion_sync_data_filtered_df['Sync'] != 'Missing', 'ID'].tolist(),
+                default=ADO_Notion_sync_data_filtered_df.loc[ADO_Notion_sync_data_filtered_df['Sync'] != 'Missing', 'ID'].tolist(),
                 key="notion_ado_sync_multiselect"  
                    # Default to the same list
             )
 
             # Filter the DataFrame based on the selected sync values for non-synced items (Sync == 0)
-            ADO_Notion_sync_data_filtered_df = ADO_data[ADO_data['ID'].isin(ADO_Notion_sync_data_sync_values)]
+            ADO_Notion_sync_data_filtered_df = ADO_Notion_sync_data_filtered_df[ADO_Notion_sync_data_filtered_df['ID'].isin(ADO_Notion_sync_data_sync_values)]
 
             if not ADO_Notion_sync_data_filtered_df.empty:
                 st.dataframe(ADO_Notion_sync_data_filtered_df)
@@ -319,7 +375,7 @@ def app():
                     for _, row in ADO_Notion_sync_data_filtered_df.iterrows():
                         status, message = update_work_item_description(next(iter([row['ID']])))
                         if status:
-                            st.info('Please reload Notion Details to see updates')
+                            st.success(f'{message}')
                         else:
                             st.error(message)
         else:
@@ -330,14 +386,14 @@ def refresh_data():
     if database_details:
         elements_df=DataFrame_from_notionDatabase(database_details)
         st.info('Please reload Notion Details to see updates')
-    work_items = fetch_work_items_by_area_paths(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],st.session_state["selected_area_paths"], st.session_state["global_variable"]["default_pat"])
+    work_items = fetch_work_items_by_area_paths(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],st.session_state["selected_work_item_types"],st.session_state["selected_area_paths"], st.session_state["global_variable"]["default_pat"])
     if 'error' in work_items:
         st.error(work_items['error'])
     else:
         # Prepare data for table
         table_data = DataFrame_from_workitems(work_items)
-    st.session_state["ADO_data"] = table_data
-    st.session_state["Notion_data"]=elements_df 
+        st.session_state["ADO_data"] = table_data
+        st.session_state["Notion_data"]=elements_df 
 
 
 # Functions for Notion
@@ -459,7 +515,7 @@ def create_notion_page(database_id, work_item_details, notion_api_key):
     if response.status_code == 200:
         return (1,f"Created Notion page for work item {ado_id}.")
     else:
-        return (0,f"Failed to create Notion page: {response.status_code} - {response.text}")
+        return (0,f"Failed to create Notion page for: {work_item_id} Reasons: {response.status_code} - {response.text}")
 
 
 # Sync ADO and Notion Items
@@ -527,7 +583,7 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
     if response.status_code == 200:
         print(f"Updated ADO work item {work_item_id} successfully.")
     else:
-        print(f"Failed to update ADO work item: {response.status_code} - {response.text}")
+        print(f"Failed to update ADO work item:{work_item_id} Reasons:{response.status_code} - {response.text}")
     try:
         ado_last_edited_date = response.json()['fields']['System.ChangedDate']
     except KeyError:
@@ -560,7 +616,7 @@ def update_ado_work_item(work_item_id, title, target_date, start_date, estimate,
     if response.status_code == 200:
         print(f"Updated Notion page {notion_page_id} successfully.")
     else:
-        print(f"Failed to update Notion page: {response.status_code} - {response.text}")
+        print(f"Failed to update Notion page for: {title} Reasons: {response.status_code} - {response.text}")
 
 def update_notion_page(page_id, title, status, work_item_type, target_date, start_date,Estimate,ado_last_edited_date, NOTION_API_KEY):
     """
@@ -621,7 +677,7 @@ def update_notion_page(page_id, title, status, work_item_type, target_date, star
     if response.status_code == 200:
         print(f"Updated Notion page {page_id} successfully.")
     else:
-        print(f"Failed to update Notion page: {response.status_code} - {response.text}")
+        print(f"Failed to update Notion page for: {title} Reasons: {response.status_code} - {response.text}")
 
 def Sync_ADO_Notion(work_item_id):
     # Fetch Azure DevOps work item
@@ -882,7 +938,7 @@ def update_notion_page_ado_id(page_id, ado_id):
     if response.status_code == 200:
         return (1, "Notion page updated successfully with ADO ID.")
     else:
-        return (0, f"Failed to update Notion page: {response.text}") 
+        return (0, f"Failed to update Notion page for: {ado_id} Reasons: {response.text}") 
 
 def update_work_item_description(work_item_id):
     message = st.info(f'Updating notion page for {work_item_id}...')
@@ -897,7 +953,7 @@ def update_work_item_description(work_item_id):
     
     page_id = fetch_page_id_by_ado_id(work_item_id)
     if not page_id:
-        return (0,'Notion Page Fetch Failed')
+        return (0,f'Notion Page Fetch Failed for: {work_item_id} ')
     # Step 1: Fetch the content from the Notion page
     blocks = fetch_notion_page_content(page_id)
     time.sleep(0.5)  # Simulate work
@@ -942,11 +998,12 @@ def update_work_item_description(work_item_id):
     )
     if response.status_code == 200:
         message.empty()
-        time.sleep(0.5)  # Simulate work
         message = st.success(f'Updated ADO Page for {work_item_id}')
+        time.sleep(2)
+        message.empty()
         return (1,f'ADO and Notion Synced for {work_item_id}')
     else:
-        return (0,' Notion Update Failed')
+        return (0,f' Notion Update Failed for: {work_item_id} ')
         
     
     
@@ -969,7 +1026,7 @@ def update_notion_description_from_ado(ado_id):
     if notion_page_response:
         notion_page = notion_page_response.json()
     else:
-        print ('notion_page_response failed')
+        print (f'notion_page_response failed for: {ado_id} Reasons:')
         return 0
 
     
@@ -996,23 +1053,23 @@ def update_notion_description_from_ado(ado_id):
                 child_items = fetch_child_items(st.session_state["global_variable"]["default_organization"], st.session_state["selected_project"],ado_id, st.session_state["global_variable"]["default_pat"])
                 if child_items :
                     if push_dataframe_to_notion(notion_page_id,pd.DataFrame(child_items)):
-                        print ('All Pushed')
+                        print (f'All Pushed for: {ado_id} ')
                         return 1
                     else: 
-                        print ('Child Items table push failed')
+                        print (f'Child Items table push failed for: {ado_id} ')
                         return 0
                 else:
-                    print ('Child Items fetch failed')
+                    print (f'Child Items fetch failed for: {ado_id} ')
                     return 1
             else:
-                print ('update_notion_page_description failed')
+                print (f'update_notion_page_description failed for: {ado_id} ')
                 return 0
 
         else:
-            print ('no System.Description ')
+            print (f'no System.Description for: {ado_id}  ')
             return 1
     else:
-        print ('failed work_item_details ')
+        print (f'failed work_item_details for: {ado_id} ' )
         return 0
            
 
@@ -1047,7 +1104,7 @@ def fetch_page_id_by_ado_id( ado_id):
         # Return the first matching page's ID
         return results[0]['id']
     else:
-        print("No page found with the given ADO ID.")
+        print(f"No page found with the given ADO ID. for: {ado_id} Reasons:")
         return None
 
 def fetch_detailed_work_items(organization, project, work_item_ids):
@@ -1170,7 +1227,7 @@ def update_block_childern(block_id,content_block):
     if response:
         return 1
     else:
-        print (f'update_block_childern post call failed{payload}')
+        print (f'update_block_childern post call failed{payload} ')
         return 0
 
 def get_page_blocks(page_id):
