@@ -104,7 +104,7 @@ st.markdown("""
 
 
 # File path to store the variables (per user, if logged in)
-file_path = 'variables.json'
+file_path = 'variable.json'
 
 # Check if the file exists, otherwise use default values
 if os.path.exists(file_path):
