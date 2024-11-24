@@ -4,3 +4,6 @@ This is a Streamlit app that integrates Notion and Azure DevOps (ADO) to automat
 ## How to run:
 1. Install dependencies: `pip install -r requirements.txt`
 2. Run the app: `streamlit run main.py`
+
+
+Try here :https://ado-notion-sync.streamlit.app/
