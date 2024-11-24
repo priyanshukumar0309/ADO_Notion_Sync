@@ -6,4 +6,4 @@ This is a Streamlit app that integrates Notion and Azure DevOps (ADO) to automat
 2. Run the app: `streamlit run main.py`
 
 
-Try Here : https://ado-notion-sync.streamlit.app/
+Try Here : https://www.ado-notion-sync.streamlit.app/
