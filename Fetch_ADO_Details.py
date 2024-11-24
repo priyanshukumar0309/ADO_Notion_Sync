@@ -30,7 +30,7 @@ def app():
 
     organization = st.text_input("Enter your Azure DevOps Organization", value=default_organization)
     personal_access_token = st.text_input("Enter your Personal Access Token", value=default_pat, type="password")
-    if st.button("Save Variable"):
+    '''if st.button("Save Variable"):
         st.session_state["global_variable"]["default_pat"] = personal_access_token
         st.session_state["global_variable"]["default_organization"] = organization
         # Write to the JSON file
@@ -39,7 +39,7 @@ def app():
                 json.dump(st.session_state["global_variable"], file)
             st.success("Variables saved successfully!")
         except Exception as e:
-            st.error(f"An error occurred while saving: {e}")
+            st.error(f"An error occurred while saving: {e}")'''
     st.markdown("<hr>", unsafe_allow_html=True)
     
     table_data = []  # Initialize table_data

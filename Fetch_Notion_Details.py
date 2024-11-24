@@ -26,10 +26,10 @@ def app():
 
     # Input for API Key
     notion_api_key = st.text_input("Notion API Key", value=NOTION_API_KEY, type="password")
-    if st.button("Save Variable"):
+    ''' if st.button("Save Variable"):
         st.session_state["global_variable"]["NOTION_API_KEY"] = notion_api_key
         with open(st.session_state['file_path'], 'w') as file:
-            json.dump(st.session_state["global_variable"], file)
+            json.dump(st.session_state["global_variable"], file)'''
     st.markdown("<hr>", unsafe_allow_html=True)
 
     # Button to fetch Notion Databases
