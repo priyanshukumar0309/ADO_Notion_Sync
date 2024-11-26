@@ -5,7 +5,10 @@ import os
 def app():
     
     st.markdown("### How to Use the Streamlit Application")
-
+    st.markdown("""
+    ### Hi there! 👋
+    If you're new to syncing Notion and Azure DevOps (ADO), don't worry — this guide will walk you through everything step by step.
+    """)
     # Section 1: Use Personal API Keys
     with st.expander("API Keys"):
         st.subheader("Steps to Obtain API Keys:")
@@ -123,36 +126,96 @@ def app():
         - If only descriptions are out of sync, choose this option to update descriptions in both systems.
         """)
 
-    st.title("Example on how to use")
-    st.header("Connecting Notion with DBT Digital Payments")
+    # Adding a more visually appealing title with an icon
+    st.header("✨ Notion & Azure DevOps Integration: Testing Guide")
+
+    # Add a separator to make sections distinct
+    st.markdown("---")
+
+    # Step 1: Setting Up Notion
+    st.markdown("### Step 1: Setting Up Notion")
     st.markdown("""
-            Follow these steps:
-            
-            1. **Notion Database Setup**: 
-                - Ensure that the Notion database you want to sync with ADO is connected to the app. 
-                    - For this example, **Test Page Database** is already connect to dbtDigitalPayments
-                    - Then you can fetch all pages from the selected Databases 
-                - Connect **Notion** with the database
-                ```
-                    dbtDigitalPayments 
-                ```
-            2. **Azure DevOps Setup**: 
-                - You can test with below detials
-                - Select the **Digital Finance** project in Azure DevOps.
-                - Use the following Area Path: 
-                ```
-                    Digital Finance\\Direct Business Transactions\\Digital Payments - Green
-                ```
-                - You can then fetch work items from this area 
-                - Sync them with the Notion database.
+        <div style="font-size:18px;">
+            <ul>
+                <li><b> Start with a Test Database:</b>
+                You can either create your own test database or use the pre-filled <b>'Notion ADO Sync Test Database'</b>, which is already connected to <code>dbtDigitalPayments</code>. If you're new, the test database is a quick way to get started.</li>
+                <li><b> Connect Your Database:</b>
+                <ul>
+                    <li><b>If you're using your own database:</b>
+                    Go to your Notion page and create a new page (e.g., "YourName Test Database").
+                    Open the page settings, and in the API section, add a connection to the <code>dbtDigitalPayments</code> integration or enter your personal API key.</li>
+                    <li><b>Using the test database?</b>
+                    You’re all set! This database is pre-connected, so just move ahead with the next steps.</li>
+                </ul></li>
+                <li><b>API Key Integration:</b>
+                If you have a personal API key, make sure it’s updated in both your Notion page and the app settings so everything syncs smoothly.</li>              
+                <li><b>Fetch Your Data:</b>
+                Once connected, you can easily fetch all pages from your Notion database to start syncing with Azure DevOps.</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
 
-            3. **App Sync Process**:
-                - You can and update work items from the **Digital Finance** project in Azure DevOps, 
-                using the **Area Path: Digital Finance\\Direct Business Transactions\\Digital Payments - Green**.
-                - It will ensure that missing items are created, existing items are synced, and descriptions are updated.
+    # Step 2: Azure DevOps Setup
+    st.markdown("### Step 2: Azure DevOps Setup")
+    st.markdown("""
+        <div style="font-size:18px;">
+            <ul>
+                <li><b> Use an Existing Area Path for Testing:</b>
+                Instead of creating a new testing area, use the following existing one to get started:
+                <ul>
+                    <li><b>Project:</b> <code>Digital Finance</code></li>
+                    <li><b>Area Path:</b> <code>Digital Finance\\Direct Business Transactions\\Digital Payments - Green</code></li>
+                </ul>
+                This area is currently unused and available for your testing purposes.</li>               
+                <li><b>Fetch Work Items from Azure DevOps:</b>
+                Once you’ve set up your area path, you can fetch work items from it and sync them with your Notion database.</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
 
-           
-        """)
+    # Step 3: Syncing Process
+    st.markdown("### Step 3: Syncing Process")
+    st.markdown("""
+        <div style="font-size:18px;">
+            <ul>
+                <li><b>Syncing:</b>
+                The app will ensure that any missing items in Notion are created, existing items are updated, and all data is synced between your Notion database and Azure DevOps.
+                This will keep your information accurate and up-to-date across both platforms.</li>               
+                <li><i><b>Remember:</b> You don’t have to worry about syncing manually. The app takes care of everything for you!</i></li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Step 4: Tidying Up
+    st.markdown("### Step 4: Tidying Up")
+    st.markdown("""
+        <div style="font-size:18px;">
+            <ul>
+                <li><b>Clean Up After Testing:</b>
+                After you're done testing, please clear your test data so others can use the same resources:
+                <ul>
+                    <li><b>In Notion:</b> Clear the database or disconnect the <code>dbtDigitalPayments</code> integration.</li>
+                    <li><b>In Azure DevOps:</b> Delete any work items you created during testing.</li>
+                </ul>
+                This helps maintain a clean testing environment for everyone to use.</li>             
+                <li>Thank you for keeping the resources available for others!</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Need Help Section
+    st.markdown("### Need Help? 🚑")
+    st.markdown("""
+        <div style="font-size:18px;">
+            <ul>
+                <li>If you face any issues or need assistance, please feel free to reach out to me directly on <a href="https://teams.microsoft.com/l/chat/0/0?users=kumar.priyanshu@volvocars.com">Teams</a>.</li>
+                <li>Alternatively, you can click the <b>alert icon</b> in the bottom-right corner of this app to submit an issue. I’ll be happy to assist you!</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Adding a visual separator at the bottom to close the guide section
+    st.markdown("---")
 
     
         
