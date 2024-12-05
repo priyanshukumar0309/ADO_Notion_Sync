@@ -76,12 +76,13 @@ def app():
                 st.session_state.selected_project = selected_project
                 st.session_state.selected_project_index = st.session_state.projects.index(selected_project)
                 area_paths = fetch_area_paths(organization, selected_project, personal_access_token)
+                status ,work_item_types=allowed_work_itemtypes(organization,selected_project,personal_access_token)
+
                 if area_paths:
                         st.session_state.area_paths = area_paths
                 if 'area_paths' in st.session_state:
                     area_paths = st.session_state.area_paths
                     selected_area_paths = st.multiselect("Select Area Paths", area_paths)
-                    status ,work_item_types=allowed_work_itemtypes(organization,selected_project,personal_access_token)
                     if status:
                         preselected_types = ['Epic', 'Feature',]  # Preselected items
                         common_types = ['Epic', 'Feature', 'Story', 'Task', 'Bug']  # Common types (preselected + non-preselected)
@@ -93,7 +94,7 @@ def app():
                         selected_work_item_types = []
                         common_types = [name for name in common_types if name in work_item_types]
                         remaining_types = [name for name in work_item_types if name not in common_types]
-                        st.write("#### Common")
+                        st.write("#### Common Work Items")
                         common_cols = st.columns(3)  # Create columns for better layout
                         for i, work_item_name in enumerate(common_types):
                             if work_item_name in blocked_types:

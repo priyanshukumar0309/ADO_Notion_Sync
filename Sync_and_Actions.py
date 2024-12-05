@@ -197,7 +197,7 @@ def app():
                 if st.button("Create Notion Pages"):
                     total_items = len(ADO_filtered_df_to_add)
                     progress_message = st.empty()  # Placeholder for progress updates
-                    index = 0
+                    index = 1
                     with st.spinner(f'Creating {len(ADO_filtered_df_to_add)} Notion pages') :   
                         for _, row in ADO_filtered_df_to_add.iterrows():
                             # Fetch work item details from Azure DevOps
@@ -259,7 +259,7 @@ def app():
                 if st.button("Update Notion Pages"):
                     total_items = len(ADO_filtered_df_to_sync)
                     progress_message = st.empty()  # Placeholder for progress updates
-                    index = 0
+                    index = 1
                     for _, row in ADO_filtered_df_to_sync.iterrows():
                         progress_message.info(f"Updating {index}/{total_items}...")
                         index +=1
@@ -324,7 +324,7 @@ def app():
                         if st.button("Create ADO Work Item"):
                             total_items = len(Notion_data_filtered_df)
                             progress_message = st.empty()  # Placeholder for progress updates
-                            index = 0
+                            index = 1
                             for _, row in Notion_data_filtered_df.iterrows():
                                 # Fetch work item details from Azure DevOps
                                 progress_message.info(f"Creating {index}/{total_items}...")
@@ -389,7 +389,7 @@ def app():
                 if st.button("Sync Notion ADO Descriptions"):
                     total_items = len(ADO_Notion_sync_data_filtered_df)
                     progress_message = st.empty()  # Placeholder for progress updates
-                    index = 0
+                    index = 1
 
                     for _, row in ADO_Notion_sync_data_filtered_df.iterrows():
                         progress_message.info(f"Updating {index}/{total_items}...")
@@ -1420,7 +1420,7 @@ def html_to_notion_blocks(html):
             else:
                 blocks.append(processed_block)
 
-    print("html_to_notion_blocks function Done")
+    print(f"html_to_notion_blocks function Doned {blocks}")
     return blocks
 
     #=============================================================================================================================================
@@ -1446,12 +1446,49 @@ def convert_notion_blocks_to_html(blocks):
         if block_type == 'paragraph':
             text = ''.join([item['text']['content'] for item in block['paragraph']['rich_text']])
             html_content += f"<p>{text}</p>\n"
+        
         elif block_type == 'heading_2':
             text = ''.join([item['text']['content'] for item in block['heading_2']['rich_text']])
             html_content += f"<h2>{text}</h2>\n"
+        
         elif block_type == 'heading_3':
             text = ''.join([item['text']['content'] for item in block['heading_3']['rich_text']])
             html_content += f"<h3>{text}</h3>\n"
+        
+        elif block_type == 'bulleted_list_item':
+            text = ''.join([item['text']['content'] for item in block['bulleted_list_item']['rich_text']])
+            html_content += f"<li>{text}</li>\n"
+            
+            # Check if the block has children and process them
+            if block.get('has_children', False):
+                children_blocks = fetch_notion_page_content(block['id'])
+                html_content += "<ul>\n"
+                html_content += convert_notion_blocks_to_html(children_blocks)  # Recursive call
+                html_content += "</ul>\n"
+        
+        elif block_type == 'numbered_list_item':
+            text = ''.join([item['text']['content'] for item in block['numbered_list_item']['rich_text']])
+            html_content += f"<li>{text}</li>\n"
+            
+            # Check if the block has children and process them
+            if block.get('has_children', False):
+                children_blocks = fetch_notion_page_content(block['id'])
+                html_content += "<ol>\n"
+                html_content += convert_notion_blocks_to_html(children_blocks)  # Recursive call
+                html_content += "</ol>\n"
+        
+        elif block_type == 'quote':
+            text = ''.join([item['text']['content'] for item in block['quote']['rich_text']])
+            html_content += f"<blockquote>{text}</blockquote>\n"
+        
+        elif block_type == 'code':
+            text = block['code']['text'][0]['text']['content']
+            language = block['code']['language']
+            html_content += f"<pre><code class='{language}'>{text}</code></pre>\n"
+        
+        # Handle unsupported block types gracefully
+        else:
+            html_content += f"<!-- Unsupported block type: {block_type} -->\n"
         # Add more block types as needed
     return html_content
 
