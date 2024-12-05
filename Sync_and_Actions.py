@@ -29,18 +29,6 @@ def app():
     st.title("Azure and Notion Databases")
     with st.expander("## Sync Flow"):
         st.image('images/ADO_Notion_Sync.png',width=1800)
-    
-    # Add code to fetch and display Notion data
-    st.markdown("""
-        <ul>
-            <li><span style="background-color: red; color: white;">Red</span> means missing items in other board</li>
-            <li><span style="background-color: yellow; color: black;">Yellow</span> means items present on both boards but out of sync</li>
-            <li><span style="background-color: green; color: white;">Green</span> means items present on both boards and in sync</li>
-            <li><Strong>'Sync'</Strong> column provides the same status</li>
-        </ul>
-        
-    """, unsafe_allow_html=True)
-    st.markdown("<hr>", unsafe_allow_html=True)
     with st.expander('### Steps'):
         st.write("""
             -  This page shows comparison of Data from ADO and Notion.
@@ -49,14 +37,25 @@ def app():
             -  You can push items from Notion to ADO.
             -  You can sync between existing items.
             -  You can update descriptions at both places without ***overwriting.*** """)
+    # Add code to fetch and display Notion data
+    st.markdown(""" <h4>Color Coding</h4>
+        <ul>
+            <li><span style="background-color: red; color: white;">Red</span> means missing items in other board</li>
+            <li><span style="background-color: yellow; color: black;">Yellow</span> means items present on both boards but out of sync</li>
+            <li><span style="background-color: green; color: white;">Green</span> means items present on both boards and in sync</li>
+            <li><Strong>'Sync'</Strong> column provides the same status</li>
+        </ul>
+    """, unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
 
     # Check if data exists in session state
-    st.markdown("<hr>", unsafe_allow_html=True)
     if "Notion_data" not in st.session_state:
          st.warning("No Data from Notion, please go to Fetch Notion Page")
     if "ADO_data" not in st.session_state:
         st.warning("No Data from ADO, please go to Azure DevOps Page")
-
+    if st.button('Reload Data'):
+       refresh_data()
     def highlight_rows_notion(row):
         # Convert both 'ADO ID' and 'ID' to string to avoid type mismatch
         notion_id = str(row['ADO ID'])
@@ -196,32 +195,37 @@ def app():
             if not ADO_filtered_df_to_add.empty:
                 st.dataframe(ADO_filtered_df_to_add)
                 if st.button("Create Notion Pages"):
-                    for _, row in ADO_filtered_df_to_add.iterrows():
-                        # Fetch work item details from Azure DevOps
-                        work_item_details = fetch_ado_work_item(
-                            row['ID'], 
-                            st.session_state["global_variable"]["default_organization"],
-                            st.session_state["selected_project"],
-                            st.session_state["global_variable"]["default_pat"]
-                        )
-                        
-                        if work_item_details:
-                            # Create a page in Notion
-                            status, message = create_notion_page(
-                                database_id=st.session_state.get('selected_db').split("(")[-1].strip(")"),
-                                work_item_details=work_item_details,
-                                notion_api_key=st.session_state["global_variable"]["NOTION_API_KEY"]
+                    total_items = len(ADO_filtered_df_to_add)
+                    progress_message = st.empty()  # Placeholder for progress updates
+                    index = 0
+                    with st.spinner(f'Creating {len(ADO_filtered_df_to_add)} Notion pages') :   
+                        for _, row in ADO_filtered_df_to_add.iterrows():
+                            # Fetch work item details from Azure DevOps
+                            progress_message.info(f"Creating {index}/{total_items}...")
+                            index +=1
+                            work_item_details = fetch_ado_work_item(
+                                row['ID'], 
+                                st.session_state["global_variable"]["default_organization"],
+                                st.session_state["selected_project"],
+                                st.session_state["global_variable"]["default_pat"]
                             )
-                            if status:
-                                st.success(message)
-                                
-                                
-                            else:
-                                st.error(message)
-                    refresh_data()
-                    st.info('Please reload Azure Devops to see updates...')
-                    time.sleep(3)
-                    st.rerun() 
+                            
+                            if work_item_details:
+                                # Create a page in Notion
+                                status, message = create_notion_page(
+                                    database_id=st.session_state.get('selected_db').split("(")[-1].strip(")"),
+                                    work_item_details=work_item_details,
+                                    notion_api_key=st.session_state["global_variable"]["NOTION_API_KEY"]
+                                )
+                                if status:
+                                    st.success(message)
+                                    
+                                else:
+                                    st.error(message)
+                        #refresh_data()
+                        st.info('Please reload Azure Devops to see updates...')
+                        time.sleep(3)
+                        st.rerun() 
         else:
             st.success('All items of ADO are already in Notion')
 
@@ -253,14 +257,19 @@ def app():
             if not ADO_filtered_df_to_sync.empty:
                 st.dataframe(ADO_filtered_df_to_sync)
                 if st.button("Update Notion Pages"):
+                    total_items = len(ADO_filtered_df_to_sync)
+                    progress_message = st.empty()  # Placeholder for progress updates
+                    index = 0
                     for _, row in ADO_filtered_df_to_sync.iterrows():
+                        progress_message.info(f"Updating {index}/{total_items}...")
+                        index +=1
                         status, message = Sync_ADO_Notion(next(iter([row['ID']])))
                         if status:
                             st.success(message)
                             
                         else:
                             st.error(message)
-                    refresh_data()
+                    #refresh_data()
                     st.info('Please reload Azure Devops to see updates...')
                     time.sleep(3)
                     st.rerun()
@@ -313,8 +322,13 @@ def app():
                     if selected_area_path:
                         selected_area_path = selected_area_path.replace("\\", "\\\\")
                         if st.button("Create ADO Work Item"):
+                            total_items = len(Notion_data_filtered_df)
+                            progress_message = st.empty()  # Placeholder for progress updates
+                            index = 0
                             for _, row in Notion_data_filtered_df.iterrows():
                                 # Fetch work item details from Azure DevOps
+                                progress_message.info(f"Creating {index}/{total_items}...")
+                                index +=1
                                 Notion_page_details = fetch_notion_page(
                                     row['id'], 
                                     st.session_state["global_variable"]["NOTION_API_KEY"]
@@ -336,7 +350,7 @@ def app():
                                         
                                     else:
                                         st.error(message)
-                            refresh_data()
+                            #refresh_data()
                             st.info('Please reload Azure Devops to see updates...')
                             time.sleep(3)
                             st.rerun()
@@ -352,7 +366,6 @@ def app():
             ADO_Notion_sync_data_unique_types = ADO_data['Work Item Type'].unique().tolist()
     
             # Step 4: Create a checkbox section for filtering by 'type'
-            st.markdown("### Filter by Work Item Type")
             ADO_Notion_sync_data_selected_work_item_types = st.multiselect(
                 "Select Work Item Types to Include:",
                 options=ADO_Notion_sync_data_unique_types,
@@ -374,7 +387,13 @@ def app():
             if not ADO_Notion_sync_data_filtered_df.empty:
                 st.dataframe(ADO_Notion_sync_data_filtered_df)
                 if st.button("Sync Notion ADO Descriptions"):
+                    total_items = len(ADO_Notion_sync_data_filtered_df)
+                    progress_message = st.empty()  # Placeholder for progress updates
+                    index = 0
+
                     for _, row in ADO_Notion_sync_data_filtered_df.iterrows():
+                        progress_message.info(f"Updating {index}/{total_items}...")
+                        index  +=1
                         status, message = update_work_item_description(next(iter([row['ID']])))
                         if status:
                             st.success(f'{message}')
@@ -382,7 +401,9 @@ def app():
                             st.error(message)
         else:
             st.success('All items of ADO are already in Notion')
-       
+
+    
+
 def refresh_data():
     database_details = fetch_notion_database_details(st.session_state["global_variable"]["NOTION_API_KEY"], st.session_state["selected_db_id"])
     if database_details:
@@ -463,7 +484,7 @@ def fetch_ado_work_item(work_item_id, ado_organization, ado_project, ado_pat):
         print(f"Failed to fetch work item: {response.status_code} - {response.text}")
         return None
 
-# Create Notion pagedef 
+# Create Notion pages
 def create_notion_page(database_id, work_item_details, notion_api_key):
     """
     Creates a new Notion page in the specified database using work item details.
